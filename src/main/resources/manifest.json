@@ -1,0 +1,21 @@
+{
+  "Group": "${mod_group}",
+  "Name": "${mod_name}",
+  "Version": "${version}",
+  "Description": "${mod_description}",
+  "ServerVersion": "${server_version}",
+  "Authors": [
+    {
+      "Name": "Tblack"
+    }
+  ],
+  "Website": "",
+  "Dependencies": {},
+  "OptionalDependencies": {
+    "LuckPerms:LuckPerms": "*"
+  },
+  "LoadBefore": {},
+  "DisabledByDefault": false,
+  "IncludesAssetPack": ${includes_asset_pack},
+  "Main": "${mod_main_class}"
+}

@@ -1,0 +1,139 @@
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow' version '9.3.1'
+    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.1.8'
+}
+
+def userHome = System.getProperty('user.home')
+def hytaleHome = ''
+
+if (project.hasProperty('hytale_home')) {
+    hytaleHome = project.findProperty('hytale_home').toString()
+} else {
+    def osName = System.getProperty('os.name').toLowerCase()
+    if (osName.contains('windows')) {
+        hytaleHome = "${userHome}/AppData/Roaming/Hytale"
+    } else if (osName.contains('mac')) {
+        hytaleHome = "${userHome}/Library/Application Support/Hytale"
+    } else {
+        hytaleHome = "${userHome}/.local/share/Hytale"
+    }
+}
+
+hytaleHome = hytaleHome.replace('\\', '/')
+
+group = project.findProperty('maven_group')?.toString() ?: 'tblack.preventcraft'
+version = project.findProperty('version')?.toString() ?: '0.1.0'
+
+def patchline = (project.findProperty('patchline') ?: 'release').toString()
+def gameDir = "${hytaleHome}/install/${patchline}/package/game/latest"
+def serverJarPath = (project.findProperty('server_jar') ?: "${gameDir}/Server/HytaleServer.jar").toString()
+def assetsPath = (project.findProperty('assets_zip') ?: "${gameDir}/Assets.zip").toString()
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    shade
+    implementation.extendsFrom(shade)
+}
+
+dependencies {
+    compileOnly files(serverJarPath)
+    compileOnly 'org.checkerframework:checker-qual:3.42.0'
+
+    // JSON configuration support used by ConfigManager.
+    shade 'com.google.code.gson:gson:2.13.1'
+
+    // Add SQLite only when a real mod needs a .db storage layer.
+    // shade 'org.xerial:sqlite-jdbc:3.50.3.0'
+    // shade 'org.slf4j:slf4j-nop:2.0.16'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['--enable-preview']
+}
+
+def manifestTokens = [
+    mod_group: (findProperty('mod_group') ?: 'Tblack').toString(),
+    mod_name: (findProperty('mod_name') ?: rootProject.name).toString(),
+    mod_id: (findProperty('mod_id') ?: 'preventcraft').toString(),
+    mod_description: (findProperty('mod_description') ?: '').toString(),
+    mod_main_class: (findProperty('mod_main_class') ?: 'tblack.preventcraft.PreventCraftPlugin').toString(),
+    server_version: (findProperty('server_version') ?: '*').toString(),
+    includes_asset_pack: (findProperty('includes_asset_pack') ?: 'true').toString(),
+    version: version.toString()
+]
+
+tasks.named('processResources', ProcessResources) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    inputs.properties(manifestTokens)
+    filesMatching('manifest.json') {
+        expand(manifestTokens)
+    }
+}
+
+tasks.named('jar') {
+    enabled = false
+}
+
+shadowJar {
+    archiveBaseName.set(rootProject.name)
+    archiveClassifier.set('')
+    configurations = [project.configurations.shade]
+    mergeServiceFiles()
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+}
+
+tasks.build {
+    dependsOn(shadowJar)
+}
+
+tasks.register('runServer', JavaExec) {
+    group = 'hytale'
+    description = 'Launch the Hytale server with PreventCraft loaded.'
+
+    dependsOn(shadowJar)
+    standardInput = System.in
+    classpath = files(serverJarPath)
+    mainClass.set('com.hypixel.hytale.Main')
+
+    def runDir = file("$projectDir/run")
+    def modsDir = file("$runDir/run_mods")
+
+    doFirst {
+        if (!runDir.exists()) runDir.mkdirs()
+        if (!modsDir.exists()) modsDir.mkdirs()
+        modsDir.listFiles()?.each { it.delete() }
+        copy {
+            from(shadowJar.archiveFile)
+            into(modsDir)
+        }
+        println "MOD JAR copied to: ${modsDir.absolutePath}"
+    }
+
+    workingDir = runDir
+
+    args = [
+        '--allow-op',
+        '--disable-sentry',
+        "--assets=${assetsPath}",
+        "--mods=${modsDir.absolutePath}"
+    ]
+
+    jvmArgs = [
+        '--enable-preview',
+        '--enable-native-access=ALL-UNNAMED',
+        '--sun-misc-unsafe-memory-access=allow',
+        '-Xmx2G',
+        '-Dfile.encoding=UTF-8'
+    ]
+}

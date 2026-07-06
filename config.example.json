@@ -1,0 +1,72 @@
+{
+  "SchemaVersion": 1,
+  "Enabled": true,
+  "Mode": "BLACKLIST",
+  "HideBlockedRecipes": true,
+  "Debug": false,
+  "Commands": {
+    "Primary": "preventcraft",
+    "Aliases": ["pcraft"],
+    "AdminPermission": "preventcraft.admin",
+    "UsePermission": "preventcraft.use"
+  },
+  "Feedback": {
+    "SendCraftDeniedMessage": true,
+    "SendBenchDeniedMessage": true,
+    "SendDeniedSound": true,
+    "CraftDeniedMessage": "You cannot craft this item.",
+    "BenchCraftDeniedMessage": "You cannot craft this bench.",
+    "BenchAccessDeniedMessage": "You cannot use this bench.",
+    "DeniedSound": "SFX_Antelope_Alerted"
+  },
+  "Migration": {
+    "CraftRestrictMode": "DENY",
+    "IncludeUsers": false
+  },
+  "Rules": [
+    {
+      "Id": "block-crude-arrow",
+      "Enabled": true,
+      "Type": "CRAFT_ITEM",
+      "Target": "weapon_arrow_crude",
+      "Action": "DENY",
+      "Scope": "EVERYONE",
+      "Group": "",
+      "Player": "",
+      "Note": "Blocks everyone from crafting crude arrows."
+    },
+    {
+      "Id": "vip-can-craft-crude-arrow",
+      "Enabled": true,
+      "Type": "CRAFT_ITEM",
+      "Target": "weapon_arrow_crude",
+      "Action": "ALLOW",
+      "Scope": "GROUP",
+      "Group": "vip",
+      "Player": "",
+      "Note": "Overrides the global deny rule for the vip group."
+    },
+    {
+      "Id": "default-cannot-access-builders-bench",
+      "Enabled": true,
+      "Type": "ACCESS_BENCH",
+      "Target": "builders",
+      "Action": "DENY",
+      "Scope": "GROUP",
+      "Group": "default",
+      "Player": "",
+      "Note": "Blocks access to an existing bench in the world."
+    },
+    {
+      "Id": "default-cannot-craft-builders-bench",
+      "Enabled": true,
+      "Type": "CRAFT_BENCH",
+      "Target": "builders",
+      "Action": "DENY",
+      "Scope": "GROUP",
+      "Group": "default",
+      "Player": "",
+      "Note": "Blocks crafting the bench item itself."
+    }
+  ]
+}

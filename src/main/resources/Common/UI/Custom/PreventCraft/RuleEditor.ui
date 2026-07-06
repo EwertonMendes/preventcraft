@@ -1,0 +1,73 @@
+$Common = "../Common.ui";
+
+@BottomDropdownStyle = DropdownBoxStyle(
+  ...$Common.@DefaultDropdownBoxStyle,
+  PanelAlign: Bottom,
+  PanelWidth: 720
+);
+
+$Common.@PageOverlay {
+  LayoutMode: CenterMiddle;
+
+  $Common.@DecoratedContainer {
+    Anchor: (Width: 820, Height: 830);
+
+    #Title {
+      Label #EditorTitle { Style: (...$Common.@DefaultLabelStyle, FontSize: 18, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #F4D06F); Padding: (Horizontal: 19); Text: "Rule editor"; }
+    }
+
+    #Content {
+      LayoutMode: TopScrolling;
+      ScrollbarStyle: $Common.@DefaultScrollbarStyle;
+      KeepScrollPosition: true;
+      Padding: (Top: 16, Bottom: 16, Left: 24, Right: 24);
+
+      Label #RuleIdLabel { Style: $Common.@DefaultLabelStyle; Anchor: (Height: 22, Bottom: 5); Text: "Rule id"; }
+      $Common.@TextField #RuleIdField { Anchor: (Height: 38, Bottom: 12); PlaceholderText: "block-crude-arrow"; MaxLength: 96; }
+
+      Label #TypeLabel { Style: $Common.@DefaultLabelStyle; Anchor: (Height: 22, Bottom: 5); Text: "Rule type"; }
+      $Common.@DropdownBox #TypeDropdown { Anchor: (Width: 720, Height: 34, Bottom: 12); Style: @BottomDropdownStyle; }
+
+      Label #ActionLabel { Style: $Common.@DefaultLabelStyle; Anchor: (Height: 22, Bottom: 5); Text: "Action"; }
+      $Common.@DropdownBox #ActionDropdown { Anchor: (Width: 720, Height: 34, Bottom: 12); Style: @BottomDropdownStyle; }
+
+      Label #ScopeLabel { Style: $Common.@DefaultLabelStyle; Anchor: (Height: 22, Bottom: 5); Text: "Scope"; }
+      $Common.@DropdownBox #ScopeDropdown { Anchor: (Width: 720, Height: 34, Bottom: 12); Style: @BottomDropdownStyle; }
+
+      Label #TargetLabel { Style: $Common.@DefaultLabelStyle; Anchor: (Height: 22, Bottom: 5); Text: "Target"; }
+      Group #TargetRow { Anchor: (Height: 44, Bottom: 12); LayoutMode: Left;
+        $Common.@TextField #TargetField { Anchor: (Height: 38, Right: 8); FlexWeight: 1; PlaceholderText: "Item id or bench id"; MaxLength: 256; }
+        $Common.@SecondaryTextButton #PickTargetButton { @Text = "Search target"; Anchor: (Width: 170, Height: 40); }
+      }
+
+      Label #GroupLabel { Style: $Common.@DefaultLabelStyle; Anchor: (Height: 22, Bottom: 5); Text: "Group"; }
+      $Common.@TextField #GroupField { Anchor: (Height: 38, Bottom: 12); PlaceholderText: "vip"; MaxLength: 96; }
+
+      Label #PlayerLabel { Style: $Common.@DefaultLabelStyle; Anchor: (Height: 22, Bottom: 5); Text: "Player"; }
+      $Common.@TextField #PlayerField { Anchor: (Height: 38, Bottom: 12); PlaceholderText: "username or uuid"; MaxLength: 96; }
+
+      Label #NoteLabel { Style: $Common.@DefaultLabelStyle; Anchor: (Height: 22, Bottom: 5); Text: "Note"; }
+      $Common.@TextField #NoteField { Anchor: (Height: 38, Bottom: 12); PlaceholderText: "Optional note for admins"; MaxLength: 256; }
+
+      Group #EnabledRow { Anchor: (Height: 36, Bottom: 10); LayoutMode: Left;
+        $Common.@CheckBox #EnabledCheck { Anchor: (Width: 22, Height: 22, Right: 10); }
+        Label #EnabledLabel { Style: (...$Common.@DefaultLabelStyle, VerticalAlignment: Center); FlexWeight: 1; Anchor: (Height: 28); Text: "Rule enabled"; }
+      }
+
+      Label #StatusLabel { Style: (...$Common.@DefaultLabelStyle, Wrap: true, TextColor: #e9b65f); Anchor: (Height: 44, Bottom: 10); Text: ""; }
+
+      Group #DeleteConfirmation { Anchor: (Height: 62, Bottom: 10); LayoutMode: Left; Visible: false;
+        Label #DeleteConfirmationLabel { Style: (...$Common.@DefaultLabelStyle, Wrap: true, VerticalAlignment: Center, TextColor: #e9b65f); FlexWeight: 1; Anchor: (Height: 58, Right: 12); Text: "Delete?"; }
+        $Common.@SecondaryTextButton #CancelDeleteButton { @Text = "Cancel"; Anchor: (Width: 130, Height: 42, Right: 10); }
+        $Common.@CancelTextButton #ConfirmDeleteButton { @Text = "Confirm delete"; Anchor: (Width: 210, Height: 42); }
+      }
+
+      Group #FooterRow { Anchor: (Height: 50); LayoutMode: Left;
+        $Common.@SecondaryTextButton #BackButton { @Text = "Back"; Anchor: (Width: 140, Height: 44, Right: 10); }
+        $Common.@TextButton #SaveButton { @Text = "Save rule"; Anchor: (Height: 44, Right: 10); FlexWeight: 1; }
+        $Common.@CancelTextButton #DeleteButton { @Text = "Delete"; Anchor: (Width: 160, Height: 44, Right: 10); }
+        $Common.@CancelTextButton #ClosePageButton { @Text = "Close"; Anchor: (Width: 140, Height: 44); }
+      }
+    }
+  }
+}

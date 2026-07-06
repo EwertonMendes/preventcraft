@@ -1,0 +1,429 @@
+$Common = "../Common.ui";
+
+$Common.@PageOverlay {
+  LayoutMode: CenterMiddle;
+
+  $Common.@DecoratedContainer {
+    Anchor: (Width: 1120, Height: 850);
+
+    #Title {
+      Label #AdminTitle {
+        Style: (...$Common.@DefaultLabelStyle, FontSize: 18, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #F4D06F);
+        Padding: (Horizontal: 19);
+        Text: "PreventCraft Administration";
+      }
+    }
+
+    #Content {
+      LayoutMode: Top;
+      Padding: (Top: 14, Bottom: 14, Left: 20, Right: 20);
+
+      Group #StatusGroup {
+        Anchor: (Height: 46, Bottom: 8);
+        LayoutMode: Full;
+        Visible: false;
+        Label #StatusLabel { Anchor: (Full: 0); Style: (...$Common.@DefaultLabelStyle, Wrap: true, VerticalAlignment: Center, TextColor: #96d4ff); Text: ""; }
+      }
+
+      Group #MetricsRow {
+        Anchor: (Height: 54, Bottom: 10);
+        LayoutMode: Left;
+        Label #ModeLabel { Style: (...$Common.@DefaultLabelStyle, VerticalAlignment: Center, TextColor: #DDE7F3); Anchor: (Width: 260, Height: 44, Right: 10); Text: "Mode"; }
+        Label #RulesCountLabel { Style: (...$Common.@DefaultLabelStyle, VerticalAlignment: Center, TextColor: #DDE7F3); Anchor: (Width: 220, Height: 44, Right: 10); Text: "Rules"; }
+        Label #LuckPermsLabel { Style: (...$Common.@DefaultLabelStyle, VerticalAlignment: Center, TextColor: #DDE7F3); Anchor: (Width: 240, Height: 44, Right: 10); Text: "LuckPerms"; }
+        Label #CatalogLabel { Style: (...$Common.@DefaultLabelStyle, VerticalAlignment: Center, TextColor: #DDE7F3); FlexWeight: 1; Anchor: (Height: 44); Text: "Catalog"; }
+      }
+
+      Group #SearchRow {
+        Anchor: (Height: 48, Bottom: 8);
+        LayoutMode: Left;
+        Label #SearchLabel { Style: (...$Common.@DefaultLabelStyle, VerticalAlignment: Center); Anchor: (Width: 110, Height: 38, Right: 10); Text: "Search"; }
+        $Common.@TextField #SearchField { Anchor: (Height: 38, Right: 8); FlexWeight: 1; PlaceholderText: "Item, bench, group, player or rule id"; MaxLength: 256; }
+        $Common.@SecondaryTextButton #SearchButton { @Text = "Search"; Anchor: (Width: 120, Height: 42, Right: 8); }
+        $Common.@TertiaryTextButton #ClearSearchButton { @Text = "Clear"; Anchor: (Width: 110, Height: 42); }
+      }
+
+      Group #ActionsRow1 {
+        Anchor: (Height: 48, Bottom: 6);
+        LayoutMode: Left;
+        $Common.@TextButton #AddItemRuleButton { @Text = "Block item craft"; Anchor: (Width: 190, Height: 42, Right: 8); }
+        $Common.@TextButton #AddBenchCraftRuleButton { @Text = "Block bench craft"; Anchor: (Width: 200, Height: 42, Right: 8); }
+        $Common.@TextButton #AddBenchAccessRuleButton { @Text = "Block bench access"; Anchor: (Width: 210, Height: 42, Right: 8); }
+        $Common.@SecondaryTextButton #ReloadButton { @Text = "Reload JSON"; Anchor: (Width: 160, Height: 42, Right: 8); }
+        $Common.@SecondaryTextButton #BackupButton { @Text = "Backup"; Anchor: (Width: 130, Height: 42); }
+      }
+
+      Group #ActionsRow2 {
+        Anchor: (Height: 44, Bottom: 8);
+        LayoutMode: Left;
+        Label #ImportHintLabel { Style: (...$Common.@DefaultLabelStyle, VerticalAlignment: Center, TextColor: #9fb1c6); FlexWeight: 1; Anchor: (Height: 38, Right: 10); Text: "CraftRestrict import reads LuckPerms nodes and creates JSON rules."; }
+        $Common.@SecondaryTextButton #ImportDryRunButton { @Text = "Dry run import"; Anchor: (Width: 180, Height: 40, Right: 8); }
+        $Common.@TextButton #ImportApplyButton { @Text = "Apply import"; Anchor: (Width: 160, Height: 40); }
+      }
+
+      Group #RulesScroll {
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $Common.@DefaultScrollbarStyle;
+        KeepScrollPosition: true;
+        Padding: (Right: 10);
+
+        Label #RulesLabel { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 24, Bottom: 8); Text: "Rules"; }
+
+          Group #RuleRow0 {
+            Anchor: (Height: 106, Bottom: 8);
+            LayoutMode: Left;
+            Padding: (Top: 8, Bottom: 8, Left: 12, Right: 12);
+            Background: #1d3044(0.78);
+            OutlineColor: #45617d(0.85);
+            OutlineSize: 1;
+
+            Group #RuleIconPanel0 {
+              Anchor: (Width: 64, Height: 64, Top: 13, Right: 12);
+              LayoutMode: Center;
+              Background: #142437(0.92);
+              OutlineColor: #55728f(0.72);
+              OutlineSize: 1;
+              ItemIcon #RuleIcon0 { Anchor: (Width: 52, Height: 50); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
+              Label #RuleKindIcon0 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 58, Height: 48); Text: "RULE"; }
+            }
+
+            Group #RuleText0 {
+              FlexWeight: 1;
+              Anchor: (Height: 86, Right: 12);
+              LayoutMode: Top;
+              Label #RuleName0 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 24); Text: "Rule"; }
+              Label #RuleDescription0 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, FontSize: 11, TextColor: #a8bbcf); Anchor: (Height: 62); Text: "Rule details"; }
+            }
+
+            Group #RuleActions0 {
+              Anchor: (Width: 290, Height: 44, Top: 23);
+              LayoutMode: Left;
+              $Common.@SecondaryTextButton #EditButton0 { @Text = "Edit"; Anchor: (Width: 112, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #DeleteButton0 { @Text = "Delete"; Anchor: (Width: 168, Height: 42); }
+            }
+
+            Group #DeleteConfirmation0 {
+              Anchor: (Width: 650, Height: 54, Top: 18);
+              LayoutMode: Left;
+              Visible: false;
+              Label #DeleteConfirmationLabel0 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, VerticalAlignment: Center, TextColor: #e9b65f); FlexWeight: 1; Anchor: (Height: 50, Right: 10); Text: "Delete?"; }
+              $Common.@SecondaryTextButton #CancelDeleteButton0 { @Text = "Cancel"; Anchor: (Width: 120, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #ConfirmDeleteButton0 { @Text = "Confirm"; Anchor: (Width: 160, Height: 42); }
+            }
+          }
+
+          Group #RuleRow1 {
+            Anchor: (Height: 106, Bottom: 8);
+            LayoutMode: Left;
+            Padding: (Top: 8, Bottom: 8, Left: 12, Right: 12);
+            Background: #1d3044(0.78);
+            OutlineColor: #45617d(0.85);
+            OutlineSize: 1;
+
+            Group #RuleIconPanel1 {
+              Anchor: (Width: 64, Height: 64, Top: 13, Right: 12);
+              LayoutMode: Center;
+              Background: #142437(0.92);
+              OutlineColor: #55728f(0.72);
+              OutlineSize: 1;
+              ItemIcon #RuleIcon1 { Anchor: (Width: 52, Height: 50); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
+              Label #RuleKindIcon1 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 58, Height: 48); Text: "RULE"; }
+            }
+
+            Group #RuleText1 {
+              FlexWeight: 1;
+              Anchor: (Height: 86, Right: 12);
+              LayoutMode: Top;
+              Label #RuleName1 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 24); Text: "Rule"; }
+              Label #RuleDescription1 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, FontSize: 11, TextColor: #a8bbcf); Anchor: (Height: 62); Text: "Rule details"; }
+            }
+
+            Group #RuleActions1 {
+              Anchor: (Width: 290, Height: 44, Top: 23);
+              LayoutMode: Left;
+              $Common.@SecondaryTextButton #EditButton1 { @Text = "Edit"; Anchor: (Width: 112, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #DeleteButton1 { @Text = "Delete"; Anchor: (Width: 168, Height: 42); }
+            }
+
+            Group #DeleteConfirmation1 {
+              Anchor: (Width: 650, Height: 54, Top: 18);
+              LayoutMode: Left;
+              Visible: false;
+              Label #DeleteConfirmationLabel1 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, VerticalAlignment: Center, TextColor: #e9b65f); FlexWeight: 1; Anchor: (Height: 50, Right: 10); Text: "Delete?"; }
+              $Common.@SecondaryTextButton #CancelDeleteButton1 { @Text = "Cancel"; Anchor: (Width: 120, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #ConfirmDeleteButton1 { @Text = "Confirm"; Anchor: (Width: 160, Height: 42); }
+            }
+          }
+
+          Group #RuleRow2 {
+            Anchor: (Height: 106, Bottom: 8);
+            LayoutMode: Left;
+            Padding: (Top: 8, Bottom: 8, Left: 12, Right: 12);
+            Background: #1d3044(0.78);
+            OutlineColor: #45617d(0.85);
+            OutlineSize: 1;
+
+            Group #RuleIconPanel2 {
+              Anchor: (Width: 64, Height: 64, Top: 13, Right: 12);
+              LayoutMode: Center;
+              Background: #142437(0.92);
+              OutlineColor: #55728f(0.72);
+              OutlineSize: 1;
+              ItemIcon #RuleIcon2 { Anchor: (Width: 52, Height: 50); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
+              Label #RuleKindIcon2 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 58, Height: 48); Text: "RULE"; }
+            }
+
+            Group #RuleText2 {
+              FlexWeight: 1;
+              Anchor: (Height: 86, Right: 12);
+              LayoutMode: Top;
+              Label #RuleName2 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 24); Text: "Rule"; }
+              Label #RuleDescription2 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, FontSize: 11, TextColor: #a8bbcf); Anchor: (Height: 62); Text: "Rule details"; }
+            }
+
+            Group #RuleActions2 {
+              Anchor: (Width: 290, Height: 44, Top: 23);
+              LayoutMode: Left;
+              $Common.@SecondaryTextButton #EditButton2 { @Text = "Edit"; Anchor: (Width: 112, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #DeleteButton2 { @Text = "Delete"; Anchor: (Width: 168, Height: 42); }
+            }
+
+            Group #DeleteConfirmation2 {
+              Anchor: (Width: 650, Height: 54, Top: 18);
+              LayoutMode: Left;
+              Visible: false;
+              Label #DeleteConfirmationLabel2 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, VerticalAlignment: Center, TextColor: #e9b65f); FlexWeight: 1; Anchor: (Height: 50, Right: 10); Text: "Delete?"; }
+              $Common.@SecondaryTextButton #CancelDeleteButton2 { @Text = "Cancel"; Anchor: (Width: 120, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #ConfirmDeleteButton2 { @Text = "Confirm"; Anchor: (Width: 160, Height: 42); }
+            }
+          }
+
+          Group #RuleRow3 {
+            Anchor: (Height: 106, Bottom: 8);
+            LayoutMode: Left;
+            Padding: (Top: 8, Bottom: 8, Left: 12, Right: 12);
+            Background: #1d3044(0.78);
+            OutlineColor: #45617d(0.85);
+            OutlineSize: 1;
+
+            Group #RuleIconPanel3 {
+              Anchor: (Width: 64, Height: 64, Top: 13, Right: 12);
+              LayoutMode: Center;
+              Background: #142437(0.92);
+              OutlineColor: #55728f(0.72);
+              OutlineSize: 1;
+              ItemIcon #RuleIcon3 { Anchor: (Width: 52, Height: 50); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
+              Label #RuleKindIcon3 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 58, Height: 48); Text: "RULE"; }
+            }
+
+            Group #RuleText3 {
+              FlexWeight: 1;
+              Anchor: (Height: 86, Right: 12);
+              LayoutMode: Top;
+              Label #RuleName3 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 24); Text: "Rule"; }
+              Label #RuleDescription3 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, FontSize: 11, TextColor: #a8bbcf); Anchor: (Height: 62); Text: "Rule details"; }
+            }
+
+            Group #RuleActions3 {
+              Anchor: (Width: 290, Height: 44, Top: 23);
+              LayoutMode: Left;
+              $Common.@SecondaryTextButton #EditButton3 { @Text = "Edit"; Anchor: (Width: 112, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #DeleteButton3 { @Text = "Delete"; Anchor: (Width: 168, Height: 42); }
+            }
+
+            Group #DeleteConfirmation3 {
+              Anchor: (Width: 650, Height: 54, Top: 18);
+              LayoutMode: Left;
+              Visible: false;
+              Label #DeleteConfirmationLabel3 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, VerticalAlignment: Center, TextColor: #e9b65f); FlexWeight: 1; Anchor: (Height: 50, Right: 10); Text: "Delete?"; }
+              $Common.@SecondaryTextButton #CancelDeleteButton3 { @Text = "Cancel"; Anchor: (Width: 120, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #ConfirmDeleteButton3 { @Text = "Confirm"; Anchor: (Width: 160, Height: 42); }
+            }
+          }
+
+          Group #RuleRow4 {
+            Anchor: (Height: 106, Bottom: 8);
+            LayoutMode: Left;
+            Padding: (Top: 8, Bottom: 8, Left: 12, Right: 12);
+            Background: #1d3044(0.78);
+            OutlineColor: #45617d(0.85);
+            OutlineSize: 1;
+
+            Group #RuleIconPanel4 {
+              Anchor: (Width: 64, Height: 64, Top: 13, Right: 12);
+              LayoutMode: Center;
+              Background: #142437(0.92);
+              OutlineColor: #55728f(0.72);
+              OutlineSize: 1;
+              ItemIcon #RuleIcon4 { Anchor: (Width: 52, Height: 50); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
+              Label #RuleKindIcon4 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 58, Height: 48); Text: "RULE"; }
+            }
+
+            Group #RuleText4 {
+              FlexWeight: 1;
+              Anchor: (Height: 86, Right: 12);
+              LayoutMode: Top;
+              Label #RuleName4 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 24); Text: "Rule"; }
+              Label #RuleDescription4 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, FontSize: 11, TextColor: #a8bbcf); Anchor: (Height: 62); Text: "Rule details"; }
+            }
+
+            Group #RuleActions4 {
+              Anchor: (Width: 290, Height: 44, Top: 23);
+              LayoutMode: Left;
+              $Common.@SecondaryTextButton #EditButton4 { @Text = "Edit"; Anchor: (Width: 112, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #DeleteButton4 { @Text = "Delete"; Anchor: (Width: 168, Height: 42); }
+            }
+
+            Group #DeleteConfirmation4 {
+              Anchor: (Width: 650, Height: 54, Top: 18);
+              LayoutMode: Left;
+              Visible: false;
+              Label #DeleteConfirmationLabel4 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, VerticalAlignment: Center, TextColor: #e9b65f); FlexWeight: 1; Anchor: (Height: 50, Right: 10); Text: "Delete?"; }
+              $Common.@SecondaryTextButton #CancelDeleteButton4 { @Text = "Cancel"; Anchor: (Width: 120, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #ConfirmDeleteButton4 { @Text = "Confirm"; Anchor: (Width: 160, Height: 42); }
+            }
+          }
+
+          Group #RuleRow5 {
+            Anchor: (Height: 106, Bottom: 8);
+            LayoutMode: Left;
+            Padding: (Top: 8, Bottom: 8, Left: 12, Right: 12);
+            Background: #1d3044(0.78);
+            OutlineColor: #45617d(0.85);
+            OutlineSize: 1;
+
+            Group #RuleIconPanel5 {
+              Anchor: (Width: 64, Height: 64, Top: 13, Right: 12);
+              LayoutMode: Center;
+              Background: #142437(0.92);
+              OutlineColor: #55728f(0.72);
+              OutlineSize: 1;
+              ItemIcon #RuleIcon5 { Anchor: (Width: 52, Height: 50); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
+              Label #RuleKindIcon5 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 58, Height: 48); Text: "RULE"; }
+            }
+
+            Group #RuleText5 {
+              FlexWeight: 1;
+              Anchor: (Height: 86, Right: 12);
+              LayoutMode: Top;
+              Label #RuleName5 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 24); Text: "Rule"; }
+              Label #RuleDescription5 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, FontSize: 11, TextColor: #a8bbcf); Anchor: (Height: 62); Text: "Rule details"; }
+            }
+
+            Group #RuleActions5 {
+              Anchor: (Width: 290, Height: 44, Top: 23);
+              LayoutMode: Left;
+              $Common.@SecondaryTextButton #EditButton5 { @Text = "Edit"; Anchor: (Width: 112, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #DeleteButton5 { @Text = "Delete"; Anchor: (Width: 168, Height: 42); }
+            }
+
+            Group #DeleteConfirmation5 {
+              Anchor: (Width: 650, Height: 54, Top: 18);
+              LayoutMode: Left;
+              Visible: false;
+              Label #DeleteConfirmationLabel5 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, VerticalAlignment: Center, TextColor: #e9b65f); FlexWeight: 1; Anchor: (Height: 50, Right: 10); Text: "Delete?"; }
+              $Common.@SecondaryTextButton #CancelDeleteButton5 { @Text = "Cancel"; Anchor: (Width: 120, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #ConfirmDeleteButton5 { @Text = "Confirm"; Anchor: (Width: 160, Height: 42); }
+            }
+          }
+
+          Group #RuleRow6 {
+            Anchor: (Height: 106, Bottom: 8);
+            LayoutMode: Left;
+            Padding: (Top: 8, Bottom: 8, Left: 12, Right: 12);
+            Background: #1d3044(0.78);
+            OutlineColor: #45617d(0.85);
+            OutlineSize: 1;
+
+            Group #RuleIconPanel6 {
+              Anchor: (Width: 64, Height: 64, Top: 13, Right: 12);
+              LayoutMode: Center;
+              Background: #142437(0.92);
+              OutlineColor: #55728f(0.72);
+              OutlineSize: 1;
+              ItemIcon #RuleIcon6 { Anchor: (Width: 52, Height: 50); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
+              Label #RuleKindIcon6 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 58, Height: 48); Text: "RULE"; }
+            }
+
+            Group #RuleText6 {
+              FlexWeight: 1;
+              Anchor: (Height: 86, Right: 12);
+              LayoutMode: Top;
+              Label #RuleName6 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 24); Text: "Rule"; }
+              Label #RuleDescription6 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, FontSize: 11, TextColor: #a8bbcf); Anchor: (Height: 62); Text: "Rule details"; }
+            }
+
+            Group #RuleActions6 {
+              Anchor: (Width: 290, Height: 44, Top: 23);
+              LayoutMode: Left;
+              $Common.@SecondaryTextButton #EditButton6 { @Text = "Edit"; Anchor: (Width: 112, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #DeleteButton6 { @Text = "Delete"; Anchor: (Width: 168, Height: 42); }
+            }
+
+            Group #DeleteConfirmation6 {
+              Anchor: (Width: 650, Height: 54, Top: 18);
+              LayoutMode: Left;
+              Visible: false;
+              Label #DeleteConfirmationLabel6 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, VerticalAlignment: Center, TextColor: #e9b65f); FlexWeight: 1; Anchor: (Height: 50, Right: 10); Text: "Delete?"; }
+              $Common.@SecondaryTextButton #CancelDeleteButton6 { @Text = "Cancel"; Anchor: (Width: 120, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #ConfirmDeleteButton6 { @Text = "Confirm"; Anchor: (Width: 160, Height: 42); }
+            }
+          }
+
+          Group #RuleRow7 {
+            Anchor: (Height: 106, Bottom: 8);
+            LayoutMode: Left;
+            Padding: (Top: 8, Bottom: 8, Left: 12, Right: 12);
+            Background: #1d3044(0.78);
+            OutlineColor: #45617d(0.85);
+            OutlineSize: 1;
+
+            Group #RuleIconPanel7 {
+              Anchor: (Width: 64, Height: 64, Top: 13, Right: 12);
+              LayoutMode: Center;
+              Background: #142437(0.92);
+              OutlineColor: #55728f(0.72);
+              OutlineSize: 1;
+              ItemIcon #RuleIcon7 { Anchor: (Width: 52, Height: 50); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
+              Label #RuleKindIcon7 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 58, Height: 48); Text: "RULE"; }
+            }
+
+            Group #RuleText7 {
+              FlexWeight: 1;
+              Anchor: (Height: 86, Right: 12);
+              LayoutMode: Top;
+              Label #RuleName7 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 24); Text: "Rule"; }
+              Label #RuleDescription7 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, FontSize: 11, TextColor: #a8bbcf); Anchor: (Height: 62); Text: "Rule details"; }
+            }
+
+            Group #RuleActions7 {
+              Anchor: (Width: 290, Height: 44, Top: 23);
+              LayoutMode: Left;
+              $Common.@SecondaryTextButton #EditButton7 { @Text = "Edit"; Anchor: (Width: 112, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #DeleteButton7 { @Text = "Delete"; Anchor: (Width: 168, Height: 42); }
+            }
+
+            Group #DeleteConfirmation7 {
+              Anchor: (Width: 650, Height: 54, Top: 18);
+              LayoutMode: Left;
+              Visible: false;
+              Label #DeleteConfirmationLabel7 { Style: (...$Common.@DefaultLabelStyle, Wrap: true, VerticalAlignment: Center, TextColor: #e9b65f); FlexWeight: 1; Anchor: (Height: 50, Right: 10); Text: "Delete?"; }
+              $Common.@SecondaryTextButton #CancelDeleteButton7 { @Text = "Cancel"; Anchor: (Width: 120, Height: 42, Right: 10); }
+              $Common.@CancelTextButton #ConfirmDeleteButton7 { @Text = "Confirm"; Anchor: (Width: 160, Height: 42); }
+            }
+          }
+
+      }
+
+      Group #PagerRow {
+        Anchor: (Height: 48, Top: 8);
+        LayoutMode: Left;
+        $Common.@SecondaryTextButton #PreviousButton { @Text = "Previous"; Anchor: (Width: 140, Height: 42, Right: 10); }
+        Label #PageLabel { Style: (...$Common.@DefaultLabelStyle, HorizontalAlignment: Center, VerticalAlignment: Center); FlexWeight: 1; Anchor: (Height: 42, Right: 10); Text: ""; }
+        $Common.@SecondaryTextButton #NextButton { @Text = "Next"; Anchor: (Width: 140, Height: 42, Right: 10); }
+        $Common.@CancelTextButton #ClosePageButton { @Text = "Close"; Anchor: (Width: 140, Height: 42); }
+      }
+    }
+  }
+}

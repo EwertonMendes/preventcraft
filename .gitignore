@@ -1,0 +1,10 @@
+.gradle/
+build/
+run/
+out/
+.idea/
+*.iml
+*.log
+*.tmp
+libs/*.jar
+!libs/.gitkeep
