@@ -51,6 +51,12 @@ public final class HytaleItemCatalog implements ItemCatalog {
         return List.copyOf(matches);
     }
 
+
+    public int size() {
+        refreshRegistryIfNeeded();
+        return registry.entries().size();
+    }
+
     @Override
     public ItemCatalogEntry describe(String itemId, String locale) {
         String normalized = normalizeItemId(itemId);

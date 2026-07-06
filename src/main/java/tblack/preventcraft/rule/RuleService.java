@@ -55,7 +55,9 @@ public final class RuleService {
         if (normalizedTarget.isBlank()) return RuleDecision.allowed("empty target");
         if (hasBypass(playerRef, type)) return RuleDecision.allowed("bypass");
 
-        PreventRule selected = selectRule(snapshot, playerRef, type, normalizedTarget);
+        PreventRule selected = type == RuleType.ACCESS_BENCH
+                ? selectBenchRule(snapshot, playerRef, type, normalizedTarget)
+                : selectRule(snapshot, playerRef, type, normalizedTarget);
         if (selected != null) {
             return selected.Action == RuleAction.DENY
                     ? RuleDecision.denied(selected, "matched rule " + selected.Id)
@@ -92,6 +94,14 @@ public final class RuleService {
         List<PreventRule> candidates = snapshot.rules().stream()
                 .filter(rule -> rule.Type == type)
                 .filter(rule -> normalize(rule.Target).equalsIgnoreCase(target))
+                .toList();
+        return selectRuleFromCandidates(snapshot, playerRef, candidates);
+    }
+
+    private PreventRule selectBenchRule(CompiledRules snapshot, PlayerRef playerRef, RuleType type, String target) {
+        List<PreventRule> candidates = snapshot.rules().stream()
+                .filter(rule -> rule.Type == type)
+                .filter(rule -> benchCatalog.matchesBenchTarget(rule.Target, target))
                 .toList();
         return selectRuleFromCandidates(snapshot, playerRef, candidates);
     }

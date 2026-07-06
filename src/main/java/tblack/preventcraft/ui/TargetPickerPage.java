@@ -26,7 +26,7 @@ import java.util.List;
 
 public final class TargetPickerPage extends InteractiveCustomUIPage<TargetPickerPage.PickerEventData> {
     private static final String LAYOUT = "PreventCraft/TargetPicker.ui";
-    private static final int PAGE_SIZE = 8;
+    private static final int PAGE_SIZE = 6;
 
     private final PreventCraftPlugin plugin;
     private final PlayerRef viewerRef;
@@ -37,7 +37,9 @@ public final class TargetPickerPage extends InteractiveCustomUIPage<TargetPicker
     private final RuleEditorDraft draft;
     private int page;
     private String query;
-    private List<TargetEntry> lastResults = List.of();
+    private String searchDraft;
+    private String status = "";
+    private List<TargetEntry> matches;
 
     public TargetPickerPage(PlayerRef playerRef, PreventCraftPlugin plugin, int ruleIndex, int returnPage, String returnSearch, RuleEditorDraft draft, int page, String query) {
         super(playerRef, CustomPageLifetime.CanDismiss, PickerEventData.CODEC);
@@ -50,6 +52,8 @@ public final class TargetPickerPage extends InteractiveCustomUIPage<TargetPicker
         this.draft = draft == null ? new RuleEditorDraft() : draft.copy();
         this.page = Math.max(0, page);
         this.query = query == null ? "" : query.trim();
+        this.searchDraft = this.query;
+        this.matches = searchTargets(this.query);
     }
 
     @Override
@@ -63,25 +67,44 @@ public final class TargetPickerPage extends InteractiveCustomUIPage<TargetPicker
     public void handleDataEvent(Ref<EntityStore> ref, Store<EntityStore> store, PickerEventData data) {
         super.handleDataEvent(ref, store, data);
         if (data == null || data.action == null || data.action.isBlank()) {
-            refresh();
+            refreshPicker();
             return;
         }
         switch (data.action) {
             case "close" -> close();
-            case "back" -> openEditor(ref, store);
-            case "search" -> search(data.searchQuery);
-            case "clear-search" -> search("");
-            case "previous" -> previous();
-            case "next" -> next();
-            default -> handleSelect(ref, store, data.action);
+            case "back" -> openEditor(ref, store, draft);
+            case "search-value-changed" -> searchDraft = data.searchValue == null ? "" : data.searchValue;
+            case "search" -> applySearch(data.searchValue == null ? searchDraft : data.searchValue);
+            case "clear-search" -> applySearch("");
+            case "previous" -> {
+                page = Math.max(0, page - 1);
+                refreshPicker();
+            }
+            case "next" -> {
+                page = Math.min(lastPage(), page + 1);
+                refreshPicker();
+            }
+            default -> {
+                if (data.action.startsWith("select:")) {
+                    select(ref, store, data.action);
+                } else {
+                    refreshPicker();
+                }
+            }
         }
     }
 
     private void bindEvents(UIEventBuilder events) {
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#ClosePageButton", event("close"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#CloseButton", event("close"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton", event("back"), false);
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#SearchButton", searchEvent(), false);
+        events.addEventBinding(
+                CustomUIEventBindingType.ValueChanged,
+                "#SearchField",
+                EventData.of("@SearchField", "#SearchField.Value").append("Action", "search-value-changed"),
+                false
+        );
         events.addEventBinding(CustomUIEventBindingType.Validating, "#SearchField", searchEvent(), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#SearchButton", searchEvent(), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ClearSearchButton", event("clear-search"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#PreviousButton", event("previous"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#NextButton", event("next"), false);
@@ -90,109 +113,139 @@ public final class TargetPickerPage extends InteractiveCustomUIPage<TargetPicker
         }
     }
 
-    private void render(UICommandBuilder commands) {
-        lastResults = searchResults();
-        clampPage(lastResults.size());
-        commands.set("#PickerTitle.TextSpans", Message.raw(I18n.translate(locale, "ui.target_picker.title")));
-        commands.set("#SubtitleLabel.TextSpans", Message.raw(I18n.translate(locale, draft.type == RuleType.CRAFT_ITEM ? "ui.target_picker.subtitle_item" : "ui.target_picker.subtitle_bench")));
-        commands.set("#SearchField.Value", query);
-        setText(commands, "#SearchButton", I18n.translate(locale, "ui.admin.search"));
-        setText(commands, "#ClearSearchButton", I18n.translate(locale, "ui.admin.clear"));
-        setText(commands, "#ResultsLabel", I18n.translate(locale, "ui.target_picker.results"));
-        setText(commands, "#PreviousButton", I18n.translate(locale, "ui.common.previous"));
-        setText(commands, "#NextButton", I18n.translate(locale, "ui.common.next"));
-        setText(commands, "#BackButton", I18n.translate(locale, "ui.common.back"));
-        setText(commands, "#ClosePageButton", I18n.translate(locale, "ui.common.close"));
-        for (int slot = 0; slot < PAGE_SIZE; slot++) renderResult(commands, slot);
-        int totalPages = Math.max(1, (int) Math.ceil(lastResults.size() / (double) PAGE_SIZE));
-        commands.set("#PageLabel.TextSpans", Message.raw(I18n.translate(locale, "ui.admin.page", page + 1, totalPages, lastResults.size(), lastResults.size())));
-        commands.set("#PreviousButton.Visible", page > 0);
-        commands.set("#NextButton.Visible", page + 1 < totalPages);
+    private void applySearch(String rawQuery) {
+        query = rawQuery == null ? "" : rawQuery.trim();
+        searchDraft = query;
+        matches = searchTargets(query);
+        page = 0;
+        refreshPicker();
     }
 
-    private void renderResult(UICommandBuilder commands, int slot) {
-        int index = page * PAGE_SIZE + slot;
-        boolean visible = index >= 0 && index < lastResults.size();
-        commands.set("#ResultRow" + slot + ".Visible", visible);
-        if (!visible) return;
-        TargetEntry entry = lastResults.get(index);
-        boolean hasIcon = entry.iconItemId() != null && !entry.iconItemId().isBlank();
-        commands.set("#ResultIcon" + slot + ".Visible", hasIcon);
-        commands.set("#ResultKindIcon" + slot + ".Visible", !hasIcon);
-        if (hasIcon) commands.set("#ResultIcon" + slot + ".ItemId", entry.iconItemId());
-        commands.set("#ResultKindIcon" + slot + ".TextSpans", Message.raw(entry.kind()));
-        commands.set("#ResultName" + slot + ".TextSpans", Message.raw(entry.displayName() == null || entry.displayName().isBlank() ? entry.id() : entry.displayName()));
-        commands.set("#ResultId" + slot + ".TextSpans", Message.raw(entry.id()));
-        setText(commands, "#SelectButton" + slot, I18n.translate(locale, "ui.target_picker.select"));
-    }
-
-    private void handleSelect(Ref<EntityStore> ref, Store<EntityStore> store, String action) {
-        if (!action.startsWith("select:")) {
-            refresh();
-            return;
+    private List<TargetEntry> searchTargets(String value) {
+        try {
+            status = "";
+            if (draft.type == RuleType.CRAFT_ITEM) {
+                List<ItemCatalogEntry> items = plugin.getItemCatalog().search(value, locale);
+                List<TargetEntry> entries = new ArrayList<>(items.size());
+                for (ItemCatalogEntry item : items) {
+                    entries.add(new TargetEntry(
+                            item.itemId(),
+                            item.hasDisplayName() ? item.displayName() : item.itemId(),
+                            item.itemId(),
+                            I18n.translate(locale, "ui.target_picker.kind_item")
+                    ));
+                }
+                return List.copyOf(entries);
+            }
+            List<BenchCatalogEntry> benches = plugin.getBenchCatalog().search(value, locale);
+            List<TargetEntry> entries = new ArrayList<>(benches.size());
+            for (BenchCatalogEntry bench : benches) {
+                entries.add(new TargetEntry(
+                        bench.benchId(),
+                        bench.hasDisplayName() ? bench.displayName() : bench.benchId(),
+                        bench.iconItemId(),
+                        I18n.translate(locale, "ui.target_picker.kind_bench")
+                ));
+            }
+            return List.copyOf(entries);
+        } catch (RuntimeException exception) {
+            status = I18n.translate(locale, "ui.target_picker.error");
+            return List.of();
         }
+    }
+
+    private void select(Ref<EntityStore> ref, Store<EntityStore> store, String action) {
         int slot;
         try {
             slot = Integer.parseInt(action.substring("select:".length()));
-        } catch (NumberFormatException exception) {
-            refresh();
+        } catch (NumberFormatException | IndexOutOfBoundsException exception) {
+            refreshPicker();
             return;
         }
-        List<TargetEntry> results = searchResults();
+        if (slot < 0 || slot >= PAGE_SIZE) {
+            refreshPicker();
+            return;
+        }
         int index = page * PAGE_SIZE + slot;
-        if (index < 0 || index >= results.size()) {
-            refresh();
+        if (index < 0 || index >= matches.size()) {
+            refreshPicker();
             return;
         }
         RuleEditorDraft updated = draft.copy();
-        updated.target = results.get(index).id();
+        updated.target = matches.get(index).id();
+        openEditor(ref, store, updated);
+    }
+
+    private void openEditor(Ref<EntityStore> ref, Store<EntityStore> store, RuleEditorDraft updatedDraft) {
         Player player = store.getComponent(ref, Player.getComponentType());
-        if (player != null) {
-            player.getPageManager().openCustomPage(ref, store, new RuleEditorPage(viewerRef, plugin, ruleIndex, returnPage, returnSearch, updated.type, updated));
+        if (player == null) {
+            status = I18n.translate(locale, "messages.player_not_found");
+            refreshPicker();
+            return;
         }
+        player.getPageManager().openCustomPage(
+                ref,
+                store,
+                new RuleEditorPage(viewerRef, plugin, ruleIndex, returnPage, returnSearch, updatedDraft.type, updatedDraft)
+        );
     }
 
-    private List<TargetEntry> searchResults() {
-        if (draft.type == RuleType.CRAFT_ITEM) {
-            List<ItemCatalogEntry> items = plugin.getItemCatalog().search(query, locale);
-            List<TargetEntry> entries = new ArrayList<>(items.size());
-            for (ItemCatalogEntry item : items) entries.add(new TargetEntry(item.itemId(), item.displayName(), item.itemId(), "ITEM"));
-            return entries;
-        }
-        List<BenchCatalogEntry> benches = plugin.getBenchCatalog().search(query, locale);
-        List<TargetEntry> entries = new ArrayList<>(benches.size());
-        for (BenchCatalogEntry bench : benches) entries.add(new TargetEntry(bench.benchId(), bench.displayName(), bench.iconItemId(), "BENCH"));
-        return entries;
-    }
-
-    private void search(String value) {
-        query = value == null ? "" : value.trim();
-        page = 0;
-        refresh();
-    }
-
-    private void previous() {
-        page = Math.max(0, page - 1);
-        refresh();
-    }
-
-    private void next() {
-        page++;
-        refresh();
-    }
-
-    private void clampPage(int totalItems) {
-        int totalPages = Math.max(1, (int) Math.ceil(totalItems / (double) PAGE_SIZE));
-        if (page >= totalPages) page = totalPages - 1;
+    private void render(UICommandBuilder commands) {
         if (page < 0) page = 0;
+        if (page > lastPage()) page = lastPage();
+
+        setText(commands, "#PickerTitle", I18n.translate(locale, "ui.target_picker.title"));
+        setText(commands, "#Subtitle", I18n.translate(locale, draft.type == RuleType.CRAFT_ITEM ? "ui.target_picker.subtitle_item" : "ui.target_picker.subtitle_bench"));
+        commands.set("#SearchField.Value", searchDraft);
+        commands.set("#SearchField.PlaceholderText", I18n.translate(locale, "ui.target_picker.search_placeholder"));
+        setText(commands, "#SearchButton", I18n.translate(locale, "ui.admin.search"));
+        setText(commands, "#ClearSearchButton", I18n.translate(locale, "ui.admin.clear"));
+        setText(commands, "#ResultsLabel", I18n.translate(locale, "ui.target_picker.results"));
+        setText(commands, "#BackButton", I18n.translate(locale, "ui.common.back"));
+        setText(commands, "#CloseButton", I18n.translate(locale, "ui.common.close"));
+        setText(commands, "#PreviousButton", I18n.translate(locale, "ui.common.previous"));
+        setText(commands, "#NextButton", I18n.translate(locale, "ui.common.next"));
+        commands.set("#StatusLabel.TextSpans", Message.raw(status == null || status.isBlank()
+                ? I18n.translate(locale, "ui.target_picker.results_count", matches.size())
+                : status));
+        commands.set("#PageLabel.TextSpans", Message.raw(I18n.translate(locale, "ui.target_picker.page", page + 1, lastPage() + 1, matches.size())));
+        commands.set("#PreviousButton.Visible", page > 0);
+        commands.set("#NextButton.Visible", page < lastPage());
+
+        boolean empty = matches.isEmpty();
+        commands.set("#NoResultsLabel.Visible", empty);
+        if (empty) {
+            String key = query.isBlank() ? "ui.target_picker.unavailable" : "ui.target_picker.no_results";
+            commands.set("#NoResultsLabel.TextSpans", Message.raw(I18n.translate(locale, key)));
+        }
+
+        int start = page * PAGE_SIZE;
+        for (int slot = 0; slot < PAGE_SIZE; slot++) {
+            int index = start + slot;
+            boolean visible = index >= 0 && index < matches.size();
+            commands.set("#ResultRow" + slot + ".Visible", visible);
+            if (!visible) {
+                continue;
+            }
+            TargetEntry entry = matches.get(index);
+            boolean hasIcon = entry.iconItemId() != null && !entry.iconItemId().isBlank();
+            commands.set("#ResultIcon" + slot + ".Visible", hasIcon);
+            commands.set("#ResultKindIcon" + slot + ".Visible", !hasIcon);
+            if (hasIcon) {
+                commands.set("#ResultIcon" + slot + ".ItemId", entry.iconItemId());
+            }
+            commands.set("#ResultKindIcon" + slot + ".TextSpans", Message.raw(entry.kind()));
+            commands.set("#ResultName" + slot + ".TextSpans", Message.raw(entry.displayName()));
+            commands.set("#ResultId" + slot + ".TextSpans", Message.raw(entry.id()));
+            setText(commands, "#SelectButton" + slot, I18n.translate(locale, "ui.target_picker.select"));
+        }
     }
 
-    private void openEditor(Ref<EntityStore> ref, Store<EntityStore> store) {
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player != null) player.getPageManager().openCustomPage(ref, store, new RuleEditorPage(viewerRef, plugin, ruleIndex, returnPage, returnSearch, draft.type, draft));
+    private int lastPage() {
+        return matches.isEmpty() ? 0 : Math.max(0, (matches.size() - 1) / PAGE_SIZE);
     }
 
-    private void refresh() {
+    private void refreshPicker() {
         UICommandBuilder commands = new UICommandBuilder();
         render(commands);
         sendUpdate(commands, false);
@@ -203,7 +256,7 @@ public final class TargetPickerPage extends InteractiveCustomUIPage<TargetPicker
     }
 
     private EventData searchEvent() {
-        return EventData.of("Action", "search").append("@SearchQuery", "#SearchField.Value");
+        return EventData.of("Action", "search").append("@SearchField", "#SearchField.Value");
     }
 
     private void setText(UICommandBuilder commands, String selector, String value) {
@@ -216,18 +269,13 @@ public final class TargetPickerPage extends InteractiveCustomUIPage<TargetPicker
     public static final class PickerEventData {
         public static final BuilderCodec<PickerEventData> CODEC = BuilderCodec.builder(PickerEventData.class, PickerEventData::new)
                 .append(new KeyedCodec<>("Action", Codec.STRING), (data, value) -> data.action = value, data -> data.action).add()
-                .append(new KeyedCodec<>("@SearchQuery", Codec.STRING), (data, value) -> data.searchQuery = value, data -> data.searchQuery).add()
+                .append(new KeyedCodec<>("@SearchField", Codec.STRING), (data, value) -> data.searchValue = value, data -> data.searchValue).add()
                 .build();
 
         public String action = "";
-        public String searchQuery = "";
+        public String searchValue = "";
 
         public PickerEventData() {
-        }
-
-        public PickerEventData(String action, String searchQuery) {
-            this.action = action;
-            this.searchQuery = searchQuery;
         }
     }
 }

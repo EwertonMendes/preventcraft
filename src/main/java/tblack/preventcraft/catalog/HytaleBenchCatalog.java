@@ -31,6 +31,11 @@ public final class HytaleBenchCatalog {
         this.itemCatalog = itemCatalog;
     }
 
+    public int size() {
+        refreshRegistryIfNeeded();
+        return registry.entries().size();
+    }
+
     public List<BenchCatalogEntry> search(String rawQuery, String locale) {
         LocalizedSnapshot snapshot = localizedSnapshot(locale);
         String query = normalizeSearch(rawQuery);
@@ -60,7 +65,7 @@ public final class HytaleBenchCatalog {
         if (target.equalsIgnoreCase(item)) return true;
         BenchCatalogEntry entry = describe(target, DEFAULT_LOCALE);
         if (entry == null) return false;
-        if (entry.blockId() != null && entry.blockId().equalsIgnoreCase(item)) return true;
+        if (entry.matches(item)) return true;
         if (entry.craftItemIds() != null) {
             for (String candidate : entry.craftItemIds()) {
                 if (candidate != null && candidate.equalsIgnoreCase(item)) return true;
@@ -92,14 +97,13 @@ public final class HytaleBenchCatalog {
         Map<String, BenchCatalogEntry> byBenchId = new LinkedHashMap<>();
         for (BaseEntry base : currentRegistry.entries()) {
             String displayName = resolveName(localizedMessages, fallbackMessages, locale, base.translationKey());
-            if (displayName == null && base.iconItemId() != null) {
-                ItemCatalogEntry item = itemCatalog.describe(base.iconItemId(), locale);
-                if (item != null && item.hasDisplayName()) displayName = item.displayName();
-            }
-            String searchText = buildSearchText(base.benchId(), base.blockId(), displayName, base.craftItemIds());
-            BenchCatalogEntry entry = new BenchCatalogEntry(base.benchId(), base.blockId(), displayName, base.iconItemId(), searchText, base.craftItemIds());
+            if (displayName == null) displayName = prettifyBenchName(base.benchId());
+            String searchText = buildSearchText(base.benchId(), base.blockId(), displayName, base.craftItemIds(), base.aliases());
+            BenchCatalogEntry entry = new BenchCatalogEntry(base.benchId(), base.blockId(), displayName, base.iconItemId(), searchText, base.craftItemIds(), base.aliases());
             entries.add(entry);
-            byBenchId.put(entry.benchId().toLowerCase(Locale.ROOT), entry);
+            putAlias(byBenchId, entry.benchId(), entry);
+            putAlias(byBenchId, entry.blockId(), entry);
+            for (String alias : entry.aliases()) putAlias(byBenchId, alias, entry);
         }
         entries.sort(Comparator
                 .comparing(BenchCatalogEntry::hasDisplayName).reversed()
@@ -142,24 +146,139 @@ public final class HytaleBenchCatalog {
                 continue;
             }
             if (bench == null) continue;
-            String benchId = normalize(callString(bench, "getId"));
-            if (benchId == null) benchId = normalize(String.valueOf(readField(bench, "id")));
+            String rawBenchId = normalize(callString(bench, "getId"));
+            if (rawBenchId == null) rawBenchId = normalize(objectToString(readField(bench, "id")));
             String blockId = normalize(callString(blockType, "getId"));
             if (blockId == null) blockId = normalize(String.valueOf(assetEntry.getKey()));
-            if (benchId == null) benchId = blockId;
-            if (benchId == null || !seen.add(benchId.toLowerCase(Locale.ROOT))) continue;
+            if (rawBenchId == null) rawBenchId = blockId;
+            String publicBenchId = publicBenchId(rawBenchId, blockId);
+            if (publicBenchId == null || !seen.add(publicBenchId.toLowerCase(Locale.ROOT))) continue;
             String translationKey = stripTranslationPrefix(firstNonBlank(
                     callString(bench, "getTranslationKey"),
                     callString(blockType, "getTranslationKey"),
                     callString(bench, "getNameKey"),
                     callString(blockType, "getNameKey")
             ));
-            Set<String> craftItemIds = candidateCraftItemIds(bench, blockType, benchId, blockId);
-            String iconItemId = firstValidItem(craftItemIds);
-            entries.add(new BaseEntry(benchId, blockId, translationKey, iconItemId, craftItemIds));
+            Set<String> craftItemIds = candidateCraftItemIds(bench, blockType, rawBenchId, blockId);
+            Set<String> aliases = benchAliases(publicBenchId, rawBenchId, blockId);
+            String iconItemId = firstValidItem(candidateIconItemIds(rawBenchId, blockId, craftItemIds, aliases));
+            entries.add(new BaseEntry(publicBenchId, blockId, translationKey, iconItemId, craftItemIds, aliases));
         }
         entries.sort(Comparator.comparing(BaseEntry::benchId, String.CASE_INSENSITIVE_ORDER));
         registry = new RegistrySnapshot(Collections.unmodifiableList(entries), registrySize, mapIdentity);
+    }
+
+
+    public boolean matchesBenchTarget(String configuredTarget, String runtimeBenchIdOrBlockId) {
+        String target = normalize(configuredTarget);
+        String runtime = normalize(runtimeBenchIdOrBlockId);
+        if (target == null || runtime == null) return false;
+        if (target.equalsIgnoreCase(runtime)) return true;
+        BenchCatalogEntry entry = describe(target, DEFAULT_LOCALE);
+        if (entry != null && entry.matches(runtime)) return true;
+        BenchCatalogEntry runtimeEntry = describe(runtime, DEFAULT_LOCALE);
+        return runtimeEntry != null && runtimeEntry.matches(target);
+    }
+
+    private void putAlias(Map<String, BenchCatalogEntry> byBenchId, String alias, BenchCatalogEntry entry) {
+        String normalized = normalize(alias);
+        if (normalized != null) byBenchId.put(normalized.toLowerCase(Locale.ROOT), entry);
+    }
+
+    private String publicBenchId(String rawBenchId, String blockId) {
+        String block = normalize(blockId);
+        String raw = normalize(rawBenchId);
+        if (block != null && block.toLowerCase(Locale.ROOT).startsWith("bench_")) return canonicalBenchId(block);
+        if (raw == null) return block == null ? null : canonicalBenchId(block);
+        if (raw.toLowerCase(Locale.ROOT).startsWith("bench_")) return canonicalBenchId(raw);
+        String vanilla = vanillaBenchIcon(raw);
+        if (vanilla != null && vanilla.toLowerCase(Locale.ROOT).startsWith("bench_")) return canonicalBenchId(vanilla);
+        return canonicalBenchId(raw);
+    }
+
+    private Set<String> benchAliases(String publicBenchId, String rawBenchId, String blockId) {
+        LinkedHashSet<String> aliases = new LinkedHashSet<>();
+        add(aliases, publicBenchId);
+        add(aliases, rawBenchId);
+        add(aliases, blockId);
+        add(aliases, stripBenchPrefix(publicBenchId));
+        add(aliases, stripBenchPrefix(blockId));
+        return Collections.unmodifiableSet(aliases);
+    }
+
+    private Set<String> candidateIconItemIds(String rawBenchId, String blockId, Set<String> craftItemIds, Set<String> aliases) {
+        LinkedHashSet<String> ids = new LinkedHashSet<>();
+        add(ids, vanillaBenchIcon(rawBenchId));
+        add(ids, vanillaBenchIcon(blockId));
+        if (aliases != null) for (String alias : aliases) add(ids, vanillaBenchIcon(alias));
+        add(ids, blockId);
+        add(ids, rawBenchId);
+        add(ids, publicBenchId(rawBenchId, blockId));
+        if (aliases != null) {
+            for (String alias : aliases) {
+                add(ids, alias);
+                String stripped = stripBenchPrefix(alias);
+                add(ids, stripped);
+                add(ids, stripped == null ? null : "Bench_" + stripped);
+            }
+        }
+        if (craftItemIds != null) for (String id : craftItemIds) add(ids, id);
+        return Collections.unmodifiableSet(ids);
+    }
+
+    private String vanillaBenchIcon(String value) {
+        String normalized = normalize(value);
+        if (normalized == null) return null;
+        String key = normalized.toLowerCase(Locale.ROOT).replace("-", "_");
+        if (key.startsWith("bench_")) key = key.substring("bench_".length());
+        return switch (key) {
+            case "workbench", "work_bench" -> "Bench_WorkBench";
+            case "builders", "builder", "builders_workbench", "builder_workbench", "builder's_workbench" -> "Bench_Builders";
+            case "campfire" -> "Bench_Campfire";
+            case "furnace" -> "Bench_Furnace";
+            case "anvil" -> "Bench_Anvil";
+            case "forge" -> "Bench_Forge";
+            case "loom" -> "Bench_Loom";
+            case "salvagebench", "salvage_bench" -> "Salvagebench";
+            default -> null;
+        };
+    }
+
+    private String canonicalBenchId(String value) {
+        String normalized = normalize(value);
+        if (normalized == null) return null;
+        String key = normalized.toLowerCase(Locale.ROOT);
+        if (key.equals("bench_workbench") || key.equals("workbench")) return "Bench_WorkBench";
+        if (key.equals("bench_builders") || key.equals("builders")) return "Bench_Builders";
+        if (key.startsWith("bench_")) return "Bench_" + normalized.substring("Bench_".length());
+        return normalized;
+    }
+
+    private String stripBenchPrefix(String value) {
+        String normalized = normalize(value);
+        if (normalized == null) return null;
+        return normalized.toLowerCase(Locale.ROOT).startsWith("bench_") ? normalized.substring("Bench_".length()) : normalized;
+    }
+
+    private String prettifyBenchName(String value) {
+        String normalized = stripBenchPrefix(value);
+        if (normalized == null) return null;
+        String spaced = normalized.replace('_', ' ').replace('-', ' ').trim();
+        if (spaced.isBlank()) return normalized;
+        StringBuilder result = new StringBuilder(spaced.length());
+        boolean upper = true;
+        for (char c : spaced.toCharArray()) {
+            if (Character.isWhitespace(c)) {
+                result.append(c);
+                upper = true;
+            } else if (upper) {
+                result.append(Character.toUpperCase(c));
+                upper = false;
+            } else {
+                result.append(c);
+            }
+        }
+        return result.toString();
     }
 
     private Set<String> candidateCraftItemIds(Bench bench, BlockType blockType, String benchId, String blockId) {
@@ -194,6 +313,10 @@ public final class HytaleBenchCatalog {
 
     private String callString(Object target, String methodName) {
         Object value = call(target, methodName);
+        return objectToString(value);
+    }
+
+    private String objectToString(Object value) {
         return value == null ? null : String.valueOf(value);
     }
 
@@ -265,15 +388,15 @@ public final class HytaleBenchCatalog {
         return cleaned.isEmpty() ? null : cleaned;
     }
 
-    private String buildSearchText(String benchId, String blockId, String displayName, Set<String> craftItemIds) {
+    private String buildSearchText(String benchId, String blockId, String displayName, Set<String> craftItemIds, Set<String> aliases) {
         Set<String> values = new LinkedHashSet<>();
         values.add(normalizeSearch(benchId));
         values.add(normalizeSearch(blockId));
         values.add(normalizeSearch(benchId == null ? null : benchId.replace('_', ' ').replace('-', ' ')));
+        values.add(normalizeSearch(stripBenchPrefix(benchId)));
         if (displayName != null) values.add(normalizeSearch(displayName));
-        if (craftItemIds != null) {
-            for (String id : craftItemIds) values.add(normalizeSearch(id));
-        }
+        if (aliases != null) for (String alias : aliases) values.add(normalizeSearch(alias));
+        if (craftItemIds != null) for (String id : craftItemIds) values.add(normalizeSearch(id));
         values.remove("");
         return String.join(" ", values);
     }
@@ -322,7 +445,7 @@ public final class HytaleBenchCatalog {
         return true;
     }
 
-    private record BaseEntry(String benchId, String blockId, String translationKey, String iconItemId, Set<String> craftItemIds) {
+    private record BaseEntry(String benchId, String blockId, String translationKey, String iconItemId, Set<String> craftItemIds, Set<String> aliases) {
     }
 
     private record RegistrySnapshot(List<BaseEntry> entries, int registrySize, int mapIdentity) {

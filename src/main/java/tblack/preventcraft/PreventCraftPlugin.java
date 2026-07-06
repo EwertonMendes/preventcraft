@@ -35,6 +35,7 @@ public final class PreventCraftPlugin extends JavaPlugin {
     private final RuleService ruleService = new RuleService(permissionService, benchCatalog);
     private final PacketManager packetManager = new PacketManager(this);
     private final CraftRestrictImporter craftRestrictImporter;
+    private PreventCraftConfig config;
 
     public PreventCraftPlugin(JavaPluginInit init) {
         super(init);
@@ -49,7 +50,8 @@ public final class PreventCraftPlugin extends JavaPlugin {
         instance = this;
 
         ConfigOperationResult load = configManager.loadInitial();
-        refreshRuntime(load.config());
+        config = load.config();
+        refreshRuntime(config);
         refreshPermissions();
 
         getCommandRegistry().registerCommand(new PreventCraftCommand(this));
@@ -96,13 +98,15 @@ public final class PreventCraftPlugin extends JavaPlugin {
     }
 
     public synchronized PreventCraftConfig getPreventCraftConfig() {
-        return configManager.get();
+        if (config == null) config = configManager.get();
+        return config;
     }
 
     public synchronized ConfigOperationResult reloadConfig() {
         ConfigOperationResult result = configManager.reload();
         if (result.success()) {
-            refreshRuntime(result.config());
+            config = result.config();
+            refreshRuntime(config);
             refreshPermissions();
             LOGGER.atInfo().log("Configuration reloaded from %s", configManager.configFile());
         } else {
@@ -112,10 +116,10 @@ public final class PreventCraftPlugin extends JavaPlugin {
     }
 
     public synchronized ConfigOperationResult saveConfig(PreventCraftConfig candidate) {
-        ConfigOperationResult result = configManager.saveWithBackup(candidate, "before-ui-save");
+        ConfigOperationResult result = configManager.save(candidate);
         if (result.success()) {
-            refreshRuntime(result.config());
-            refreshPermissions();
+            config = result.config();
+            refreshRuntime(config);
             LOGGER.atInfo().log("Configuration saved to %s", configManager.configFile());
         } else {
             LOGGER.atWarning().log("Configuration save failed: %s", result.message());
@@ -130,7 +134,8 @@ public final class PreventCraftPlugin extends JavaPlugin {
     public synchronized CraftRestrictImportResult importCraftRestrict(CraftRestrictMode mode, boolean dryRun, boolean includeUsers) {
         CraftRestrictImportResult result = craftRestrictImporter.importRules(mode, dryRun, includeUsers);
         if (result.success() && !dryRun) {
-            refreshRuntime(configManager.get());
+            config = configManager.get();
+            refreshRuntime(config);
             refreshPermissions();
         }
         return result;
@@ -142,9 +147,9 @@ public final class PreventCraftPlugin extends JavaPlugin {
 
     private void refreshPermissions() {
         permissionService.clearCache();
-        PreventCraftConfig config = configManager.get();
-        permissionService.register(config.Commands.AdminPermission);
-        permissionService.register(config.Commands.UsePermission);
+        PreventCraftConfig activeConfig = getPreventCraftConfig();
+        permissionService.register(activeConfig.Commands.AdminPermission);
+        permissionService.register(activeConfig.Commands.UsePermission);
         permissionService.register(ModConstants.ADMIN_PERMISSION);
         permissionService.register(ModConstants.UI_PERMISSION);
         permissionService.register(ModConstants.RELOAD_PERMISSION);
@@ -166,11 +171,9 @@ public final class PreventCraftPlugin extends JavaPlugin {
 
     private void onItemAssetsLoaded(LoadedAssetsEvent<String, Item, DefaultAssetMap<String, Item>> event) {
         itemCatalog.invalidate();
-        LOGGER.atInfo().log("Item catalog invalidated after assets loaded.");
     }
 
     private void onBlockAssetsLoaded(LoadedAssetsEvent<String, BlockType, DefaultAssetMap<String, BlockType>> event) {
         benchCatalog.invalidate();
-        LOGGER.atInfo().log("Bench catalog invalidated after block assets loaded.");
     }
 }

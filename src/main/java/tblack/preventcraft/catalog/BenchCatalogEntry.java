@@ -8,7 +8,8 @@ public record BenchCatalogEntry(
         String displayName,
         String iconItemId,
         String searchText,
-        Set<String> craftItemIds
+        Set<String> craftItemIds,
+        Set<String> aliases
 ) {
     public boolean hasDisplayName() {
         return displayName != null && !displayName.isBlank();
@@ -16,5 +17,17 @@ public record BenchCatalogEntry(
 
     public boolean hasIcon() {
         return iconItemId != null && !iconItemId.isBlank();
+    }
+
+    public boolean matches(String value) {
+        if (value == null || value.isBlank()) return false;
+        if (benchId != null && benchId.equalsIgnoreCase(value)) return true;
+        if (blockId != null && blockId.equalsIgnoreCase(value)) return true;
+        if (aliases != null) {
+            for (String alias : aliases) {
+                if (alias != null && alias.equalsIgnoreCase(value)) return true;
+            }
+        }
+        return false;
     }
 }
