@@ -142,11 +142,19 @@ public final class ConfigManager {
 
     public PreventCraftConfig normalize(PreventCraftConfig config) {
         if (config == null) config = new PreventCraftConfig();
-        if (config.SchemaVersion <= 0) config.SchemaVersion = PreventCraftConfig.CURRENT_SCHEMA_VERSION;
+        if (config.SchemaVersion <= 0) config.SchemaVersion = 1;
         if (config.SchemaVersion > PreventCraftConfig.CURRENT_SCHEMA_VERSION) {
             throw new IllegalArgumentException("Unsupported SchemaVersion " + config.SchemaVersion + ". Expected " + PreventCraftConfig.CURRENT_SCHEMA_VERSION + ".");
         }
+        int sourceSchemaVersion = config.SchemaVersion;
+        if (config.SchemaVersion < PreventCraftConfig.CURRENT_SCHEMA_VERSION) {
+            config.SchemaVersion = PreventCraftConfig.CURRENT_SCHEMA_VERSION;
+        }
         if (config.Mode == null) config.Mode = RestrictionMode.BLACKLIST;
+        // Schema 2 forced this compatibility field off while recipe-window filtering
+        // was retired. Schema 3 uses client recipe-catalog deltas instead, so old
+        // schema 2 files are upgraded to the new non-blocking visibility behavior.
+        if (sourceSchemaVersion < 3) config.HideBlockedRecipes = true;
         if (config.Commands == null) config.Commands = new PreventCraftConfig.Commands();
         if (config.Feedback == null) config.Feedback = new PreventCraftConfig.Feedback();
         if (config.Migration == null) config.Migration = new PreventCraftConfig.Migration();

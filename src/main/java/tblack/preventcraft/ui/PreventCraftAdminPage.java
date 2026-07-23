@@ -16,8 +16,6 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import tblack.preventcraft.PreventCraftPlugin;
-import tblack.preventcraft.catalog.BenchCatalogEntry;
-import tblack.preventcraft.catalog.ItemCatalogEntry;
 import tblack.preventcraft.config.ConfigOperationResult;
 import tblack.preventcraft.config.PreventCraftConfig;
 import tblack.preventcraft.i18n.I18n;
@@ -48,6 +46,22 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
     private String cachedFilterSignature = null;
     private int cachedItemCount = -1;
     private int cachedBenchCount = -1;
+    private AdminTab activeTab = AdminTab.RULES;
+    private boolean maintenanceInitialized;
+    private MaintenanceFeedbackKind maintenanceFeedbackKind = MaintenanceFeedbackKind.IDLE;
+    private String maintenanceFeedbackTitle = "";
+    private String maintenanceFeedbackMessage = "";
+    private String importReport = "-";
+    private boolean importSummaryVisible;
+    private boolean confirmImport;
+    private int importHolders;
+    private int importNodes;
+    private int importRules;
+    private int importDuplicates;
+    private int importWildcards;
+    private int importUnknown;
+    private List<String> importUnresolvedItemIds = List.of();
+    private int importCorrectedItemTargets;
 
     public PreventCraftAdminPage(PlayerRef playerRef, PreventCraftPlugin plugin, int page, String searchQuery, String status) {
         super(playerRef, CustomPageLifetime.CanDismiss, AdminEventData.CODEC);
@@ -75,6 +89,8 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
         }
         switch (data.action) {
             case "close" -> close();
+            case "tab-rules" -> switchTab(AdminTab.RULES);
+            case "tab-maintenance" -> switchTab(AdminTab.MAINTENANCE);
             case "previous" -> previous();
             case "next" -> next();
             case "search" -> search(data.searchQuery);
@@ -85,7 +101,9 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
             case "reload" -> reload();
             case "backup" -> backup();
             case "import-dry-run" -> importCraftRestrict(true);
-            case "import-apply" -> importCraftRestrict(false);
+            case "import-apply-request" -> requestImportConfirmation();
+            case "import-apply-cancel" -> cancelImportConfirmation();
+            case "import-apply-confirm" -> importCraftRestrict(false);
             case "delete-cancel" -> cancelDelete();
             default -> handleSlotAction(ref, store, data.action);
         }
@@ -93,6 +111,10 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
 
     private void bindEvents(UIEventBuilder events) {
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ClosePageButton", event("close"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#RulesTabActive", event("tab-rules"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#RulesTabInactive", event("tab-rules"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#MaintenanceTabActive", event("tab-maintenance"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#MaintenanceTabInactive", event("tab-maintenance"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#PreviousButton", event("previous"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#NextButton", event("next"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#SearchButton", searchEvent(), false);
@@ -104,7 +126,9 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ReloadButton", event("reload"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#BackupButton", event("backup"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ImportDryRunButton", event("import-dry-run"), false);
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#ImportApplyButton", event("import-apply"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#ImportApplyButton", event("import-apply-request"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#CancelImportButton", event("import-apply-cancel"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#ConfirmImportButton", event("import-apply-confirm"), false);
         for (int slot = 0; slot < PAGE_SIZE; slot++) {
             events.addEventBinding(CustomUIEventBindingType.Activating, "#EditButton" + slot, event("edit:" + slot), false);
             events.addEventBinding(CustomUIEventBindingType.Activating, "#DeleteButton" + slot, event("delete-request:" + slot), false);
@@ -120,10 +144,11 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
 
         commands.set("#AdminTitle.TextSpans", Message.raw(I18n.translate(locale, "ui.admin.title")));
         commands.set("#StatusLabel.TextSpans", Message.raw(status == null ? "" : status));
+        renderNavigation(commands);
 
         setText(commands, "#ModeCardTitle", I18n.translate(locale, "ui.admin.metric_mode"));
         setText(commands, "#ModeCardValue", modeLabel(config.Mode));
-        setText(commands, "#ModeCardSub", I18n.translate(locale, "ui.admin.metric_mode_sub", yesNo(config.HideBlockedRecipes)));
+        setText(commands, "#ModeCardSub", I18n.translate(locale, "ui.admin.metric_mode_sub"));
 
         setText(commands, "#RulesCardTitle", I18n.translate(locale, "ui.admin.metric_rules"));
         setText(commands, "#RulesCardValue", plugin.getRuleService().activeRuleCount() + " / " + config.Rules.size());
@@ -134,7 +159,7 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
         setText(commands, "#LuckPermsCardSub", I18n.translate(locale, "ui.admin.metric_luckperms_sub"));
 
         setText(commands, "#CatalogCardTitle", I18n.translate(locale, "ui.admin.metric_catalog"));
-        setText(commands, "#CatalogCardValue", I18n.translate(locale, "ui.admin.metric_catalog_value"));
+        setText(commands, "#CatalogCardValue", formatCatalogCount(catalogItemCount()) + " / " + formatCatalogCount(catalogBenchCount()));
         setText(commands, "#CatalogCardSub", I18n.translate(locale, "ui.admin.metric_catalog_sub"));
 
         commands.set("#SearchField.Value", searchQuery);
@@ -144,26 +169,106 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
         setText(commands, "#AddItemRuleButton", I18n.translate(locale, "ui.admin.add_item"));
         setText(commands, "#AddBenchCraftRuleButton", I18n.translate(locale, "ui.admin.add_bench_craft"));
         setText(commands, "#AddBenchAccessRuleButton", I18n.translate(locale, "ui.admin.add_bench_access"));
-        setText(commands, "#ReloadButton", I18n.translate(locale, "ui.admin.reload"));
-        setText(commands, "#BackupButton", I18n.translate(locale, "ui.admin.backup"));
-        setText(commands, "#ImportDryRunButton", I18n.translate(locale, "ui.admin.import_dry_run"));
-        setText(commands, "#ImportApplyButton", I18n.translate(locale, "ui.admin.import_apply"));
         setText(commands, "#RulesLabel", I18n.translate(locale, "ui.admin.rules"));
         setText(commands, "#PreviousButton", I18n.translate(locale, "ui.common.previous"));
         setText(commands, "#NextButton", I18n.translate(locale, "ui.common.next"));
-        setText(commands, "#ClosePageButton", I18n.translate(locale, "ui.common.close"));
+        renderRulesContent(commands, config, filtered, true);
+    }
 
-        for (int slot = 0; slot < PAGE_SIZE; slot++) {
-            renderRuleRow(commands, config, filtered, slot);
+    private void renderNavigation(UICommandBuilder commands) {
+        renderNavigationState(commands);
+        if (activeTab == AdminTab.MAINTENANCE || maintenanceInitialized) {
+            renderMaintenance(commands);
+            maintenanceInitialized = true;
         }
+    }
 
+    private void renderNavigationState(UICommandBuilder commands) {
+        boolean rulesVisible = activeTab == AdminTab.RULES;
+        boolean hasRuleFeedback = status != null && !status.isBlank();
+
+        setText(commands, "#RulesTabActive", I18n.translate(locale, "ui.admin.tab_rules"));
+        setText(commands, "#RulesTabInactive", I18n.translate(locale, "ui.admin.tab_rules"));
+        setText(commands, "#MaintenanceTabActive", I18n.translate(locale, "ui.admin.tab_maintenance"));
+        setText(commands, "#MaintenanceTabInactive", I18n.translate(locale, "ui.admin.tab_maintenance"));
+        commands.set("#RulesTabActive.Visible", rulesVisible);
+        commands.set("#RulesTabInactive.Visible", !rulesVisible);
+        commands.set("#MaintenanceTabActive.Visible", !rulesVisible);
+        commands.set("#MaintenanceTabInactive.Visible", rulesVisible);
+
+        commands.set("#RulesFeedback.Visible", rulesVisible && hasRuleFeedback);
+        commands.set("#MetricsRow.Visible", rulesVisible);
+        commands.set("#SearchRow.Visible", rulesVisible);
+        commands.set("#ActionsRow1.Visible", rulesVisible);
+        commands.set("#RulesScroll.Visible", rulesVisible);
+        commands.set("#PagerRow.Visible", rulesVisible);
+        commands.set("#MaintenanceView.Visible", !rulesVisible);
+    }
+
+    private void renderMaintenance(UICommandBuilder commands) {
+        setText(commands, "#MaintenanceTitle", I18n.translate(locale, "ui.admin.maintenance_title"));
+        setText(commands, "#MaintenanceSubtitle", I18n.translate(locale, "ui.admin.maintenance_subtitle"));
+        setText(commands, "#ConfigToolsTitle", I18n.translate(locale, "ui.admin.config_tools_title"));
+        setText(commands, "#ConfigToolsDescription", I18n.translate(locale, "ui.admin.config_tools_description"));
+        setText(commands, "#ImportToolsTitle", I18n.translate(locale, "ui.admin.import_tools_title"));
+        setText(commands, "#ImportToolsDescription", I18n.translate(locale, "ui.admin.import_tools_description"));
+        setText(commands, "#ReloadButton", I18n.translate(locale, "ui.admin.reload"));
+        setText(commands, "#BackupButton", I18n.translate(locale, "ui.admin.create_backup"));
+        setText(commands, "#ImportDryRunButton", I18n.translate(locale, "ui.admin.import_dry_run_short"));
+        setText(commands, "#ImportApplyButton", I18n.translate(locale, "ui.admin.import_apply"));
+        setText(commands, "#ImportConfirmationLabel", I18n.translate(locale, "ui.admin.import_confirmation"));
+        setText(commands, "#CancelImportButton", I18n.translate(locale, "ui.common.cancel"));
+        setText(commands, "#ConfirmImportButton", I18n.translate(locale, "ui.admin.confirm_import"));
+
+        commands.set("#ImportActions.Visible", !confirmImport);
+        commands.set("#ImportConfirmation.Visible", confirmImport);
+        commands.set("#FeedbackIdleIcon.Visible", maintenanceFeedbackKind == MaintenanceFeedbackKind.IDLE);
+        commands.set("#FeedbackSuccessIcon.Visible", maintenanceFeedbackKind == MaintenanceFeedbackKind.SUCCESS);
+        commands.set("#FeedbackErrorIcon.Visible", maintenanceFeedbackKind == MaintenanceFeedbackKind.ERROR);
+        setText(commands, "#FeedbackTitle", maintenanceFeedbackTitle.isBlank()
+                ? I18n.translate(locale, "ui.admin.feedback_idle_title")
+                : maintenanceFeedbackTitle);
+        setText(commands, "#FeedbackCaption", I18n.translate(locale, "ui.admin.feedback_caption"));
+        setText(commands, "#MaintenanceFeedbackMessage", maintenanceFeedbackMessage.isBlank()
+                ? I18n.translate(locale, "ui.admin.feedback_idle_message")
+                : maintenanceFeedbackMessage);
+
+        commands.set("#ImportSummary.Visible", importSummaryVisible);
+        setText(commands, "#ImportHoldersValue", String.valueOf(importHolders));
+        setText(commands, "#ImportNodesValue", String.valueOf(importNodes));
+        setText(commands, "#ImportRulesValue", String.valueOf(importRules));
+        setText(commands, "#ImportDuplicatesValue", String.valueOf(importDuplicates));
+        setText(commands, "#ImportWildcardsValue", String.valueOf(importWildcards));
+        setText(commands, "#ImportUnknownValue", String.valueOf(importUnknown));
+        setText(commands, "#ImportHoldersLabel", I18n.translate(locale, "ui.admin.import_holders"));
+        setText(commands, "#ImportNodesLabel", I18n.translate(locale, "ui.admin.import_nodes"));
+        setText(commands, "#ImportRulesLabel", I18n.translate(locale, "ui.admin.import_rules"));
+        setText(commands, "#ImportDuplicatesLabel", I18n.translate(locale, "ui.admin.import_duplicates"));
+        setText(commands, "#ImportWildcardsLabel", I18n.translate(locale, "ui.admin.import_wildcards"));
+        setText(commands, "#ImportUnknownLabel", I18n.translate(locale, "ui.admin.import_unknown"));
+        setText(commands, "#ImportResolutionLabel", importResolutionMessage());
+        setText(commands, "#ImportReportLabel", I18n.translate(locale, "ui.admin.import_report", importReport));
+    }
+
+    private void renderRulesContent(UICommandBuilder commands, PreventCraftConfig config, List<Integer> filtered, boolean initializeRows) {
+        commands.set("#NoRulesPanel.Visible", activeTab == AdminTab.RULES && filtered.isEmpty());
+        setText(commands, "#NoRulesLabel", I18n.translate(locale, searchQuery.isBlank() ? "ui.admin.no_rules" : "ui.admin.no_search_results"));
+        for (int slot = 0; slot < PAGE_SIZE; slot++) {
+            renderRuleRow(commands, config, filtered, slot, initializeRows);
+        }
         int totalPages = Math.max(1, (int) Math.ceil(filtered.size() / (double) PAGE_SIZE));
         commands.set("#PageLabel.TextSpans", Message.raw(I18n.translate(locale, "ui.admin.page", page + 1, totalPages, filtered.size(), config.Rules.size())));
         commands.set("#PreviousButton.Visible", page > 0);
         commands.set("#NextButton.Visible", page + 1 < totalPages);
     }
 
-    private void renderRuleRow(UICommandBuilder commands, PreventCraftConfig config, List<Integer> filtered, int slot) {
+    private void renderRuleRow(UICommandBuilder commands, PreventCraftConfig config, List<Integer> filtered, int slot, boolean initialize) {
+        if (initialize) {
+            setText(commands, "#EditButton" + slot, I18n.translate(locale, "ui.common.edit"));
+            setText(commands, "#DeleteButton" + slot, I18n.translate(locale, "ui.common.delete"));
+            setText(commands, "#CancelDeleteButton" + slot, I18n.translate(locale, "ui.common.cancel"));
+            setText(commands, "#ConfirmDeleteButton" + slot, I18n.translate(locale, "ui.common.confirm_delete"));
+        }
         int position = page * PAGE_SIZE + slot;
         boolean visible = position >= 0 && position < filtered.size();
         commands.set("#RuleRow" + slot + ".Visible", visible);
@@ -176,11 +281,9 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
         boolean confirm = Integer.valueOf(ruleIndex).equals(pendingDeleteIndex);
         commands.set("#RuleActions" + slot + ".Visible", !confirm);
         commands.set("#DeleteConfirmation" + slot + ".Visible", confirm);
-        commands.set("#DeleteConfirmationLabel" + slot + ".TextSpans", Message.raw(I18n.translate(locale, "ui.admin.delete_confirmation", rule.Id)));
-        setText(commands, "#EditButton" + slot, I18n.translate(locale, "ui.common.edit"));
-        setText(commands, "#DeleteButton" + slot, I18n.translate(locale, "ui.common.delete"));
-        setText(commands, "#CancelDeleteButton" + slot, I18n.translate(locale, "ui.common.cancel"));
-        setText(commands, "#ConfirmDeleteButton" + slot, I18n.translate(locale, "ui.common.confirm_delete"));
+        if (confirm) {
+            commands.set("#DeleteConfirmationLabel" + slot + ".TextSpans", Message.raw(I18n.translate(locale, "ui.admin.delete_confirmation", rule.Id)));
+        }
 
         String ruleName = rule.Id + (rule.Enabled ? "" : " (" + I18n.translate(locale, "ui.admin.inactive") + ")");
         commands.set("#RuleName" + slot + ".TextSpans", Message.raw(ruleName));
@@ -189,22 +292,30 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
     }
 
     private void renderIcon(UICommandBuilder commands, PreventRule rule, int slot) {
-        String iconId = null;
-        String fallback = rule.Type == RuleType.CRAFT_ITEM
-                ? I18n.translate(locale, "ui.target_picker.kind_item")
-                : I18n.translate(locale, "ui.target_picker.kind_bench");
-        if (rule.Type == RuleType.CRAFT_ITEM) {
-            iconId = safe(rule.Target);
-        } else {
-            iconId = vanillaBenchIcon(rule.Target);
+        String iconId = "";
+        try {
+            if (rule.Type == RuleType.CRAFT_ITEM) {
+                String resolvedItemId = plugin.getItemCatalog().resolveItemId(rule.Target);
+                if (resolvedItemId != null) iconId = resolvedItemId;
+            } else {
+                String resolvedIconId = plugin.getBenchCatalog().resolveIconItemId(rule.Target);
+                if (resolvedIconId != null) iconId = resolvedIconId;
+            }
+        } catch (RuntimeException ignored) {
+            iconId = "";
         }
-        boolean hasIcon = iconId != null && !iconId.isBlank();
+        boolean hasIcon = !iconId.isBlank();
         commands.set("#RuleIcon" + slot + ".Visible", hasIcon);
         if (hasIcon) {
             commands.set("#RuleIcon" + slot + ".ItemId", iconId);
         }
         commands.set("#RuleKindIcon" + slot + ".Visible", !hasIcon);
-        commands.set("#RuleKindIcon" + slot + ".TextSpans", Message.raw(fallback));
+        if (!hasIcon) {
+            String fallback = rule.Type == RuleType.CRAFT_ITEM
+                    ? I18n.translate(locale, "ui.target_picker.kind_item")
+                    : I18n.translate(locale, "ui.target_picker.kind_bench");
+            commands.set("#RuleKindIcon" + slot + ".TextSpans", Message.raw(fallback));
+        }
     }
 
     private String describeRule(PreventRule rule) {
@@ -222,48 +333,20 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
         return safe(rule.Target);
     }
 
-    private String translatedTargetForSearch(PreventRule rule) {
-        try {
-            if (rule.Type == RuleType.CRAFT_ITEM) {
-                ItemCatalogEntry entry = plugin.getItemCatalog().describe(rule.Target, locale);
-                return entry != null && entry.hasDisplayName() ? entry.displayName() : "";
-            }
-            BenchCatalogEntry entry = plugin.getBenchCatalog().describe(rule.Target, locale);
-            return entry != null && entry.hasDisplayName() ? entry.displayName() : "";
-        } catch (Throwable ignored) {
-            return "";
-        }
-    }
-
-    private String vanillaBenchIcon(String value) {
-        String normalized = value == null ? "" : value.trim().toLowerCase(Locale.ROOT).replace('-', '_');
-        if (normalized.startsWith("bench_")) normalized = normalized.substring("bench_".length());
-        return switch (normalized) {
-            case "workbench", "work_bench" -> "Bench_WorkBench";
-            case "builders", "builder", "builders_workbench", "builder_workbench", "builder's_workbench" -> "Bench_Builders";
-            case "campfire" -> "Bench_Campfire";
-            case "furnace" -> "Bench_Furnace";
-            case "anvil" -> "Bench_Anvil";
-            case "forge" -> "Bench_Forge";
-            case "loom" -> "Bench_Loom";
-            default -> "";
-        };
-    }
-
     private void handleSlotAction(Ref<EntityStore> ref, Store<EntityStore> store, String action) {
         if (action.startsWith("edit:")) {
             int index = indexForSlot(parseSlot(action, "edit:"));
             if (index >= 0) {
                 openEditor(ref, store, index, null, null);
             } else {
-                refresh();
+                refreshRules();
             }
             return;
         }
         if (action.startsWith("delete-request:")) {
             int index = indexForSlot(parseSlot(action, "delete-request:"));
             pendingDeleteIndex = index >= 0 ? index : null;
-            refresh();
+            refreshRules();
             return;
         }
         if (action.startsWith("delete-confirm:")) {
@@ -271,29 +354,43 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
             confirmDelete(index);
             return;
         }
-        refresh();
+        refreshRules();
     }
 
     private void openEditor(Ref<EntityStore> ref, Store<EntityStore> store, int ruleIndex, RuleType newType, RuleEditorDraft draft) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) {
             status = I18n.translate(locale, "messages.player_not_found");
+            activeTab = AdminTab.RULES;
             refresh();
             return;
         }
         player.getPageManager().openCustomPage(ref, store, new RuleEditorPage(viewerRef, plugin, ruleIndex, page, searchQuery, newType, draft));
     }
 
+    private void switchTab(AdminTab tab) {
+        AdminTab requested = tab == null ? AdminTab.RULES : tab;
+        if (activeTab == requested) return;
+        activeTab = requested;
+        UICommandBuilder commands = new UICommandBuilder();
+        if (requested == AdminTab.MAINTENANCE && !maintenanceInitialized) {
+            renderMaintenance(commands);
+            maintenanceInitialized = true;
+        }
+        renderNavigationState(commands);
+        sendUpdate(commands, false);
+    }
+
     private void previous() {
         page = Math.max(0, page - 1);
         pendingDeleteIndex = null;
-        refresh();
+        refreshRules();
     }
 
     private void next() {
         page++;
         pendingDeleteIndex = null;
-        refresh();
+        refreshRules();
     }
 
     private void search(String query) {
@@ -301,7 +398,7 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
         page = 0;
         pendingDeleteIndex = null;
         cachedFilterSignature = null;
-        refresh();
+        refreshRules();
     }
 
     private void clearSearch() {
@@ -309,34 +406,90 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
         page = 0;
         pendingDeleteIndex = null;
         cachedFilterSignature = null;
-        refresh();
+        refreshRules();
     }
 
     private void reload() {
         ConfigOperationResult result = plugin.reloadConfig();
-        status = result.success()
-                ? I18n.translate(locale, "messages.reload_success", plugin.getRuleService().activeRuleCount())
-                : I18n.translate(locale, "messages.reload_failed", result.message());
+        activeTab = AdminTab.MAINTENANCE;
+        confirmImport = false;
+        setMaintenanceFeedback(
+                result.success() ? MaintenanceFeedbackKind.SUCCESS : MaintenanceFeedbackKind.ERROR,
+                result.success() ? "ui.admin.feedback_reload_success" : "ui.admin.feedback_reload_error",
+                result.success()
+                        ? I18n.translate(locale, "messages.reload_success", plugin.getRuleService().activeRuleCount())
+                        : I18n.translate(locale, "messages.reload_failed", result.message())
+        );
         invalidateCaches();
         refresh();
     }
 
     private void backup() {
         ConfigOperationResult result = plugin.createBackup("manual-ui");
-        status = result.success()
-                ? I18n.translate(locale, "messages.backup_success", result.message())
-                : I18n.translate(locale, "messages.backup_failed", result.message());
+        activeTab = AdminTab.MAINTENANCE;
+        confirmImport = false;
+        setMaintenanceFeedback(
+                result.success() ? MaintenanceFeedbackKind.SUCCESS : MaintenanceFeedbackKind.ERROR,
+                result.success() ? "ui.admin.feedback_backup_success" : "ui.admin.feedback_backup_error",
+                result.success()
+                        ? I18n.translate(locale, "messages.backup_success", result.message())
+                        : I18n.translate(locale, "messages.backup_failed", result.message())
+        );
         refresh();
     }
 
     private void importCraftRestrict(boolean dryRun) {
+        activeTab = AdminTab.MAINTENANCE;
+        confirmImport = false;
         PreventCraftConfig config = plugin.getPreventCraftConfig();
         CraftRestrictImportResult result = plugin.importCraftRestrict(config.Migration.CraftRestrictModeValue, dryRun, config.Migration.IncludeUsers);
-        status = result.success()
-                ? I18n.translate(locale, "messages.import_result", result.scannedHolders(), result.scannedNodes(), result.importedRules(), result.skippedDuplicates(), result.skippedWildcards(), result.skippedUnknown(), result.dryRun(), result.reportFile() == null ? "-" : result.reportFile().getFileName())
-                : I18n.translate(locale, "messages.import_failed", result.message());
+        if (result.success()) {
+            setMaintenanceFeedback(
+                    MaintenanceFeedbackKind.SUCCESS,
+                    dryRun ? "ui.admin.feedback_import_preview_success" : "ui.admin.feedback_import_success",
+                    I18n.translate(locale, "ui.admin.feedback_import_message", result.scannedNodes(), result.scannedHolders())
+            );
+            importSummaryVisible = true;
+            importHolders = result.scannedHolders();
+            importNodes = result.scannedNodes();
+            importRules = result.importedRules();
+            importDuplicates = result.skippedDuplicates();
+            importWildcards = result.skippedWildcards();
+            importUnknown = result.skippedUnknown();
+            importUnresolvedItemIds = result.unresolvedItemIds();
+            importCorrectedItemTargets = result.correctedItemTargets();
+            importReport = result.reportFile() == null ? "-" : result.reportFile().getFileName().toString();
+        } else {
+            setMaintenanceFeedback(
+                    MaintenanceFeedbackKind.ERROR,
+                    "ui.admin.feedback_import_error",
+                    I18n.translate(locale, "messages.import_failed", result.message())
+            );
+        }
         invalidateCaches();
         refresh();
+    }
+
+    private void requestImportConfirmation() {
+        activeTab = AdminTab.MAINTENANCE;
+        confirmImport = true;
+        refreshMaintenance();
+    }
+
+    private void cancelImportConfirmation() {
+        confirmImport = false;
+        refreshMaintenance();
+    }
+
+    private void setMaintenanceFeedback(MaintenanceFeedbackKind kind, String titleKey, String message) {
+        status = "";
+        maintenanceFeedbackKind = kind == null ? MaintenanceFeedbackKind.IDLE : kind;
+        maintenanceFeedbackTitle = I18n.translate(locale, titleKey);
+        maintenanceFeedbackMessage = message == null ? "" : message;
+        importSummaryVisible = false;
+        importReport = "-";
+        importUnresolvedItemIds = List.of();
+        importCorrectedItemTargets = 0;
     }
 
     private void confirmDelete(int index) {
@@ -351,6 +504,7 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
         copy.Rules.remove(index);
         ConfigOperationResult result = plugin.saveConfig(copy);
         status = result.success() ? I18n.translate(locale, "messages.rule_deleted", id) : I18n.translate(locale, "messages.save_failed", result.message());
+        activeTab = AdminTab.RULES;
         pendingDeleteIndex = null;
         invalidateCaches();
         refresh();
@@ -358,7 +512,7 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
 
     private void cancelDelete() {
         pendingDeleteIndex = null;
-        refresh();
+        refreshRules();
     }
 
     private List<Integer> filteredIndexes(PreventCraftConfig config) {
@@ -367,6 +521,7 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
             return cachedFilteredIndexes;
         }
         String query = normalizeSearch(searchQuery);
+        List<String> searchTexts = plugin.getRuleService().adminSearchTexts();
         List<Integer> indexes = new ArrayList<>();
         for (int i = 0; i < config.Rules.size(); i++) {
             PreventRule rule = config.Rules.get(i);
@@ -377,7 +532,7 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
                 indexes.add(i);
                 continue;
             }
-            String text = buildRuleSearchText(rule);
+            String text = i < searchTexts.size() ? searchTexts.get(i) : "";
             if (text.contains(query)) {
                 indexes.add(i);
             }
@@ -388,32 +543,7 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
     }
 
     private String buildFilterSignature(PreventCraftConfig config) {
-        return normalizeSearch(searchQuery) + "|" + config.Rules.size() + "|" + plugin.getRuleService().activeRuleCount();
-    }
-
-    private String buildRuleSearchText(PreventRule rule) {
-        StringBuilder builder = new StringBuilder();
-        appendSearch(builder, rule.Id);
-        appendSearch(builder, rule.Type == null ? null : I18n.translate(locale, "ui.type." + rule.Type.name().toLowerCase(Locale.ROOT)));
-        appendSearch(builder, rule.Action == null ? null : I18n.translate(locale, "ui.action." + rule.Action.name().toLowerCase(Locale.ROOT)));
-        appendSearch(builder, rule.Scope == null ? null : I18n.translate(locale, "ui.scope." + rule.Scope.name().toLowerCase(Locale.ROOT)));
-        appendSearch(builder, rule.Target);
-        appendSearch(builder, rule.Group);
-        appendSearch(builder, rule.Player);
-        appendSearch(builder, rule.Note);
-        appendSearch(builder, ruleTargetLabel(rule));
-        appendSearch(builder, translatedTargetForSearch(rule));
-        return builder.toString();
-    }
-
-    private void appendSearch(StringBuilder builder, String value) {
-        String normalized = normalizeSearch(value);
-        if (!normalized.isBlank()) {
-            if (builder.length() > 0) {
-                builder.append(' ');
-            }
-            builder.append(normalized);
-        }
+        return normalizeSearch(searchQuery) + "|" + System.identityHashCode(config) + "|" + config.Rules.size();
     }
 
     private String normalizeSearch(String value) {
@@ -502,6 +632,42 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
         sendUpdate(commands, false);
     }
 
+    private void refreshRules() {
+        PreventCraftConfig config = plugin.getPreventCraftConfig();
+        List<Integer> filtered = filteredIndexes(config);
+        clampPage(filtered.size());
+        UICommandBuilder commands = new UICommandBuilder();
+        commands.set("#SearchField.Value", searchQuery);
+        renderRulesContent(commands, config, filtered, false);
+        sendUpdate(commands, false);
+    }
+
+    private void refreshMaintenance() {
+        UICommandBuilder commands = new UICommandBuilder();
+        renderNavigationState(commands);
+        renderMaintenance(commands);
+        maintenanceInitialized = true;
+        sendUpdate(commands, false);
+    }
+
+    private String importResolutionMessage() {
+        String resolution;
+        if (importUnresolvedItemIds.isEmpty()) {
+            resolution = I18n.translate(locale, "ui.admin.import_resolved_all");
+        } else {
+            int visibleCount = Math.min(5, importUnresolvedItemIds.size());
+            String sample = String.join(", ", importUnresolvedItemIds.subList(0, visibleCount));
+            if (visibleCount < importUnresolvedItemIds.size()) {
+                sample += I18n.translate(locale, "ui.admin.import_unresolved_more", importUnresolvedItemIds.size() - visibleCount);
+            }
+            resolution = I18n.translate(locale, "ui.admin.import_unresolved", importUnresolvedItemIds.size(), sample);
+        }
+        if (importCorrectedItemTargets > 0) {
+            resolution += " " + I18n.translate(locale, "ui.admin.import_corrected_existing", importCorrectedItemTargets);
+        }
+        return resolution;
+    }
+
     private EventData event(String action) {
         return EventData.of("Action", action);
     }
@@ -512,6 +678,17 @@ public final class PreventCraftAdminPage extends InteractiveCustomUIPage<Prevent
 
     private void setText(UICommandBuilder commands, String selector, String value) {
         commands.set(selector + ".TextSpans", Message.raw(value));
+    }
+
+    private enum AdminTab {
+        RULES,
+        MAINTENANCE
+    }
+
+    private enum MaintenanceFeedbackKind {
+        IDLE,
+        SUCCESS,
+        ERROR
     }
 
     public static final class AdminEventData {

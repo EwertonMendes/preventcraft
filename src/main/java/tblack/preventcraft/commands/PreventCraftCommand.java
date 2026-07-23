@@ -17,9 +17,11 @@ import tblack.preventcraft.config.PreventCraftConfig;
 import tblack.preventcraft.importer.CraftRestrictImportResult;
 import tblack.preventcraft.importer.CraftRestrictMode;
 import tblack.preventcraft.i18n.I18n;
+import tblack.preventcraft.permissions.PermissionService;
 import tblack.preventcraft.ui.PreventCraftAdminPage;
 import tblack.preventcraft.util.Chat;
 
+import java.util.List;
 import java.util.UUID;
 
 public final class PreventCraftCommand extends AbstractPlayerCommand {
@@ -51,7 +53,7 @@ public final class PreventCraftCommand extends AbstractPlayerCommand {
     }
 
     private static void openPanel(PreventCraftPlugin plugin, CommandContext context, Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef playerRef) {
-        if (!canUse(plugin, context)) {
+        if (!canUse(plugin, context, playerRef)) {
             Chat.send(context, Chat.error(context, "messages.no_permission"));
             return;
         }
@@ -67,10 +69,27 @@ public final class PreventCraftCommand extends AbstractPlayerCommand {
         player.getPageManager().openCustomPage(ref, store, new PreventCraftAdminPage(playerRef, plugin, 0, "", ""));
     }
 
-    private static boolean canUse(PreventCraftPlugin plugin, CommandContext context) {
-        return hasPermission(plugin, context, plugin.getPreventCraftConfig().Commands.UsePermission)
-                || hasPermission(plugin, context, ModConstants.UI_PERMISSION)
-                || canAdmin(plugin, context);
+    private static boolean canUse(PreventCraftPlugin plugin, CommandContext context, PlayerRef playerRef) {
+        PreventCraftConfig config = plugin.getPreventCraftConfig();
+        PermissionService.PermissionSnapshot permissions = plugin.getPermissionService().snapshot(
+                playerRef,
+                List.of(config.Commands.UsePermission, ModConstants.UI_PERMISSION, config.Commands.AdminPermission, ModConstants.ADMIN_PERMISSION),
+                false
+        );
+        boolean allowed = permissions.has(config.Commands.UsePermission)
+                || permissions.has(ModConstants.UI_PERMISSION)
+                || permissions.has(config.Commands.AdminPermission)
+                || permissions.has(ModConstants.ADMIN_PERMISSION);
+        if (allowed) return true;
+        try {
+            return context.sender().hasPermission("*")
+                    || context.sender().hasPermission(config.Commands.UsePermission)
+                    || context.sender().hasPermission(ModConstants.UI_PERMISSION)
+                    || context.sender().hasPermission(config.Commands.AdminPermission)
+                    || context.sender().hasPermission(ModConstants.ADMIN_PERMISSION);
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     private static boolean canAdmin(PreventCraftPlugin plugin, CommandContext context) {
@@ -177,7 +196,12 @@ public final class PreventCraftCommand extends AbstractPlayerCommand {
                 return;
             }
             PreventCraftConfig config = plugin.getPreventCraftConfig();
-            Chat.send(context, Chat.info(context, "messages.status", config.Enabled, config.Mode.name(), config.HideBlockedRecipes, plugin.getRuleService().activeRuleCount(), config.Rules.size(), plugin.getPermissionService().isLuckPermsAvailable(), plugin.getConfigManager().configFile()));
+            Chat.send(context, Chat.info(context, "messages.status", config.Enabled, config.Mode.name(), plugin.getRuleService().activeRuleCount(), config.Rules.size(), plugin.getPermissionService().isLuckPermsAvailable(), plugin.getConfigManager().configFile()));
+            if (config.Debug) {
+                tblack.preventcraft.rule.RuleService.PerformanceSnapshot performance = plugin.getRuleService().performanceSnapshot();
+                Chat.send(context, Chat.info(context, "messages.performance", performance.decisions(),
+                        performance.averageNanos() / 1_000.0, performance.maximumNanos() / 1_000.0));
+            }
         }
     }
 

@@ -18,17 +18,124 @@ $Common.@PageOverlay {
       LayoutMode: Top;
       Padding: (Top: 14, Bottom: 14, Left: 20, Right: 20);
 
-      Group #StatusBar {
-        Anchor: (Height: 68, Bottom: 10);
-        LayoutMode: Full;
-        Padding: (Top: 10, Bottom: 10, Left: 14, Right: 14);
-        Background: #15263a(0.70);
-        OutlineColor: #45617d(0.65);
+      Group #TabBar {
+        Anchor: (Height: 48, Bottom: 10);
+        LayoutMode: Left;
+        $Common.@TextButton #RulesTabActive { @Text = "Regras"; Anchor: (Width: 220, Height: 42, Right: 8); }
+        $Common.@SecondaryTextButton #RulesTabInactive { @Text = "Regras"; Anchor: (Width: 220, Height: 42, Right: 8); Visible: false; }
+        $Common.@TextButton #MaintenanceTabActive { @Text = "Manutenção"; Anchor: (Width: 220, Height: 42); Visible: false; }
+        $Common.@SecondaryTextButton #MaintenanceTabInactive { @Text = "Manutenção"; Anchor: (Width: 220, Height: 42); }
+        Group { FlexWeight: 1; }
+      }
+
+      Group #RulesFeedback {
+        Anchor: (Height: 46, Bottom: 10);
+        LayoutMode: Left;
+        Padding: (Top: 8, Bottom: 8, Left: 12, Right: 12);
+        Background: #17344a(0.78);
+        OutlineColor: #4d82a6(0.78);
         OutlineSize: 1;
-        Label #StatusLabel {
-          Anchor: (Full: 0);
-          Style: (...$Common.@DefaultLabelStyle, Wrap: true, VerticalAlignment: Center, TextColor: #96d4ff);
-          Text: "";
+        Visible: false;
+        Label { Style: (...$Common.@DefaultLabelStyle, FontSize: 16, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8fd3ff); Anchor: (Width: 30, Height: 28, Right: 8); Text: "i"; }
+        Label #StatusLabel { Style: (...$Common.@DefaultLabelStyle, Wrap: true, VerticalAlignment: Center, TextColor: #b9dcf5); FlexWeight: 1; Anchor: (Height: 28); Text: ""; }
+      }
+
+      Group #MaintenanceView {
+        FlexWeight: 1;
+        LayoutMode: Top;
+        Visible: false;
+
+        Group #MaintenanceHero {
+          Anchor: (Height: 76, Bottom: 12);
+          LayoutMode: Top;
+          Padding: (Top: 10, Bottom: 8, Left: 14, Right: 14);
+          Background: #162a3d(0.78);
+          OutlineColor: #45617d(0.72);
+          OutlineSize: 1;
+          Label #MaintenanceTitle { Style: (...$Common.@DefaultLabelStyle, FontSize: 18, RenderBold: true, TextColor: #f1cf78); Anchor: (Height: 27); Text: "Manutenção e migração"; }
+          Label #MaintenanceSubtitle { Style: (...$Common.@DefaultLabelStyle, FontSize: 12, Wrap: true, TextColor: #9eb2c7); FlexWeight: 1; Anchor: (Height: 26); Text: "Ferramentas ocasionais para administrar os arquivos e importar regras."; }
+        }
+
+        Group #MaintenanceCards {
+          Anchor: (Height: 208, Bottom: 12);
+          LayoutMode: Left;
+
+          Group #ConfigToolsCard {
+            FlexWeight: 1;
+            Anchor: (Height: 208, Right: 10);
+            LayoutMode: Top;
+            Padding: (Top: 14, Bottom: 14, Left: 16, Right: 16);
+            Background: #1d3044(0.82);
+            OutlineColor: #45617d(0.82);
+            OutlineSize: 1;
+            Label #ConfigToolsTitle { Style: (...$Common.@DefaultLabelStyle, FontSize: 16, RenderBold: true, TextColor: #dde7f3); Anchor: (Height: 28); Text: "Arquivo de configuração"; }
+            Label #ConfigToolsDescription { Style: (...$Common.@DefaultLabelStyle, FontSize: 12, Wrap: true, TextColor: #96a9be); FlexWeight: 1; Anchor: (Height: 78); Text: "Recarregue o JSON depois de uma edição externa ou crie uma cópia de segurança antes de grandes mudanças."; }
+            Group { Anchor: (Height: 44); LayoutMode: Left;
+              $Common.@SecondaryTextButton #ReloadButton { @Text = "Recarregar JSON"; FlexWeight: 1; Anchor: (Height: 42, Right: 8); }
+              $Common.@SecondaryTextButton #BackupButton { @Text = "Criar backup"; FlexWeight: 1; Anchor: (Height: 42); }
+            }
+          }
+
+          Group #ImportToolsCard {
+            FlexWeight: 1;
+            Anchor: (Height: 208);
+            LayoutMode: Top;
+            Padding: (Top: 14, Bottom: 14, Left: 16, Right: 16);
+            Background: #1d3044(0.82);
+            OutlineColor: #45617d(0.82);
+            OutlineSize: 1;
+            Label #ImportToolsTitle { Style: (...$Common.@DefaultLabelStyle, FontSize: 16, RenderBold: true, TextColor: #dde7f3); Anchor: (Height: 28); Text: "Importar do CraftRestrict"; }
+            Label #ImportToolsDescription { Style: (...$Common.@DefaultLabelStyle, FontSize: 12, Wrap: true, TextColor: #96a9be); FlexWeight: 1; Anchor: (Height: 78); Text: "Analise as permissões do LuckPerms e converta regras compatíveis para o PreventCraft."; }
+            Group #ImportActions { Anchor: (Height: 44); LayoutMode: Left;
+              $Common.@SecondaryTextButton #ImportDryRunButton { @Text = "Simular primeiro"; FlexWeight: 1; Anchor: (Height: 42, Right: 8); }
+              $Common.@TextButton #ImportApplyButton { @Text = "Aplicar importação"; FlexWeight: 1; Anchor: (Height: 42); }
+            }
+            Group #ImportConfirmation { Anchor: (Height: 48); LayoutMode: Left; Visible: false;
+              Label #ImportConfirmationLabel { Style: (...$Common.@DefaultLabelStyle, FontSize: 11, Wrap: true, VerticalAlignment: Center, TextColor: #e9c46a); FlexWeight: 1; Anchor: (Height: 46, Right: 8); Text: "Aplicar agora?"; }
+              $Common.@SecondaryTextButton #CancelImportButton { @Text = "Cancelar"; Anchor: (Width: 105, Height: 40, Right: 8); }
+              $Common.@TextButton #ConfirmImportButton { @Text = "Confirmar"; Anchor: (Width: 120, Height: 40); }
+            }
+          }
+        }
+
+        Group #MaintenanceFeedback {
+          FlexWeight: 1;
+          LayoutMode: Top;
+          Padding: (Top: 14, Bottom: 14, Left: 16, Right: 16);
+          Background: #142437(0.84);
+          OutlineColor: #45617d(0.76);
+          OutlineSize: 1;
+
+          Group #FeedbackHeader { Anchor: (Height: 42, Bottom: 8); LayoutMode: Left;
+            Group #FeedbackIdleIcon { Anchor: (Width: 38, Height: 38, Right: 10); LayoutMode: Center; Background: #26374a; OutlineColor: #68829c; OutlineSize: 1;
+              Label { Style: (...$Common.@DefaultLabelStyle, FontSize: 18, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #a8bbcf); Anchor: (Width: 32, Height: 32); Text: "i"; }
+            }
+            Group #FeedbackSuccessIcon { Anchor: (Width: 38, Height: 38, Right: 10); LayoutMode: Center; Background: #173c32; OutlineColor: #49a884; OutlineSize: 1; Visible: false;
+              Label { Style: (...$Common.@DefaultLabelStyle, FontSize: 11, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #7de0b7); Anchor: (Width: 32, Height: 32); Text: "OK"; }
+            }
+            Group #FeedbackErrorIcon { Anchor: (Width: 38, Height: 38, Right: 10); LayoutMode: Center; Background: #452530; OutlineColor: #c65d72; OutlineSize: 1; Visible: false;
+              Label { Style: (...$Common.@DefaultLabelStyle, FontSize: 18, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #ff8ca1); Anchor: (Width: 32, Height: 32); Text: "!"; }
+            }
+            Group { FlexWeight: 1; Anchor: (Height: 40); LayoutMode: Top;
+              Label #FeedbackTitle { Style: (...$Common.@DefaultLabelStyle, FontSize: 16, RenderBold: true, TextColor: #dde7f3); Anchor: (Height: 22); Text: "Tudo pronto"; }
+              Label #FeedbackCaption { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, TextColor: #8398ad); Anchor: (Height: 16); Text: "Resultado da última operação"; }
+            }
+          }
+
+          Label #MaintenanceFeedbackMessage { Style: (...$Common.@DefaultLabelStyle, FontSize: 12, Wrap: true, TextColor: #a8bbcf); Anchor: (Height: 48, Bottom: 10); Text: "Escolha uma ferramenta acima. O resultado aparecerá aqui de forma resumida."; }
+
+          Group #ImportSummary { Anchor: (Height: 154); LayoutMode: Top; Visible: false;
+            Group #ImportStats { Anchor: (Height: 68, Bottom: 8); LayoutMode: Left;
+              Group { FlexWeight: 1; Anchor: (Height: 66, Right: 8); LayoutMode: Top; Padding: (Top: 8, Left: 10, Right: 10); Background: #1d3044(0.78); Label #ImportHoldersValue { Style: (...$Common.@DefaultLabelStyle, FontSize: 17, RenderBold: true); Anchor: (Height: 25); Text: "0"; } Label #ImportHoldersLabel { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, TextColor: #8398ad); Anchor: (Height: 18); Text: "Titulares"; } }
+              Group { FlexWeight: 1; Anchor: (Height: 66, Right: 8); LayoutMode: Top; Padding: (Top: 8, Left: 10, Right: 10); Background: #1d3044(0.78); Label #ImportNodesValue { Style: (...$Common.@DefaultLabelStyle, FontSize: 17, RenderBold: true); Anchor: (Height: 25); Text: "0"; } Label #ImportNodesLabel { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, TextColor: #8398ad); Anchor: (Height: 18); Text: "Permissões"; } }
+              Group { FlexWeight: 1; Anchor: (Height: 66, Right: 8); LayoutMode: Top; Padding: (Top: 8, Left: 10, Right: 10); Background: #173c32(0.78); Label #ImportRulesValue { Style: (...$Common.@DefaultLabelStyle, FontSize: 17, RenderBold: true, TextColor: #7de0b7); Anchor: (Height: 25); Text: "0"; } Label #ImportRulesLabel { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, TextColor: #73b99d); Anchor: (Height: 18); Text: "Regras novas"; } }
+              Group { FlexWeight: 1; Anchor: (Height: 66, Right: 8); LayoutMode: Top; Padding: (Top: 8, Left: 10, Right: 10); Background: #1d3044(0.78); Label #ImportDuplicatesValue { Style: (...$Common.@DefaultLabelStyle, FontSize: 17, RenderBold: true); Anchor: (Height: 25); Text: "0"; } Label #ImportDuplicatesLabel { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, TextColor: #8398ad); Anchor: (Height: 18); Text: "Duplicadas"; } }
+              Group { FlexWeight: 1; Anchor: (Height: 66, Right: 8); LayoutMode: Top; Padding: (Top: 8, Left: 10, Right: 10); Background: #1d3044(0.78); Label #ImportWildcardsValue { Style: (...$Common.@DefaultLabelStyle, FontSize: 17, RenderBold: true); Anchor: (Height: 25); Text: "0"; } Label #ImportWildcardsLabel { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, TextColor: #8398ad); Anchor: (Height: 18); Text: "Wildcards"; } }
+              Group { FlexWeight: 1; Anchor: (Height: 66); LayoutMode: Top; Padding: (Top: 8, Left: 10, Right: 10); Background: #1d3044(0.78); Label #ImportUnknownValue { Style: (...$Common.@DefaultLabelStyle, FontSize: 17, RenderBold: true); Anchor: (Height: 25); Text: "0"; } Label #ImportUnknownLabel { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, TextColor: #8398ad); Anchor: (Height: 18); Text: "Ignoradas"; } }
+            }
+            Label #ImportResolutionLabel { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, Wrap: true, TextColor: #e9c46a); Anchor: (Height: 40); Text: "IDs encontrados no catálogo."; }
+            Label #ImportReportLabel { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, TextColor: #8fd3ff); Anchor: (Height: 28); Text: "Relatório: -"; }
+          }
         }
       }
 
@@ -97,15 +204,6 @@ $Common.@PageOverlay {
         $Common.@TextButton #AddBenchAccessRuleButton { @Text = "Bloquear acesso à bancada"; Anchor: (Width: 342, Height: 42); }
       }
 
-      Group #ActionsRow2 {
-        Anchor: (Height: 48, Bottom: 10);
-        LayoutMode: Left;
-        $Common.@SecondaryTextButton #ReloadButton { @Text = "Recarregar JSON"; Anchor: (Width: 180, Height: 42, Right: 8); }
-        $Common.@SecondaryTextButton #BackupButton { @Text = "Backup"; Anchor: (Width: 140, Height: 42, Right: 20); }
-        $Common.@SecondaryTextButton #ImportDryRunButton { @Text = "Simular importação"; Anchor: (Width: 220, Height: 42, Right: 8); }
-        $Common.@TextButton #ImportApplyButton { @Text = "Aplicar importação"; Anchor: (Width: 200, Height: 42); }
-      }
-
       Group #RulesScroll {
         FlexWeight: 1;
         LayoutMode: TopScrolling;
@@ -114,6 +212,10 @@ $Common.@PageOverlay {
         Padding: (Right: 10);
 
         Label #RulesLabel { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 24, Bottom: 8); Text: "Regras"; }
+
+        Group #NoRulesPanel { Anchor: (Height: 82, Bottom: 8); LayoutMode: Center; Background: #162a3d(0.68); OutlineColor: #45617d(0.58); OutlineSize: 1; Visible: false;
+          Label #NoRulesLabel { Style: (...$Common.@DefaultLabelStyle, FontSize: 13, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #9eb2c7); Anchor: (Width: 780, Height: 56); Text: "Nenhuma regra encontrada."; }
+        }
 
         Group #RuleRow0 {
           Anchor: (Height: 108, Bottom: 8);
@@ -458,9 +560,10 @@ $Common.@PageOverlay {
         LayoutMode: Left;
         $Common.@SecondaryTextButton #PreviousButton { @Text = "Previous"; Anchor: (Width: 140, Height: 42, Right: 10); }
         Label #PageLabel { Style: (...$Common.@DefaultLabelStyle, HorizontalAlignment: Center, VerticalAlignment: Center); FlexWeight: 1; Anchor: (Height: 42, Right: 10); Text: ""; }
-        $Common.@SecondaryTextButton #NextButton { @Text = "Next"; Anchor: (Width: 140, Height: 42, Right: 10); }
-        $Common.@CancelTextButton #ClosePageButton { @Text = "Close"; Anchor: (Width: 140, Height: 42); }
+        $Common.@SecondaryTextButton #NextButton { @Text = "Next"; Anchor: (Width: 140, Height: 42); }
       }
     }
+
+    $Common.@CloseButton #ClosePageButton { Anchor: (Top: -10, Right: -10, Width: 32, Height: 32); }
   }
 }

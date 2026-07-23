@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import tblack.preventcraft.config.ConfigManager;
 import tblack.preventcraft.config.ConfigOperationResult;
 import tblack.preventcraft.config.PreventCraftConfig;
+import tblack.preventcraft.catalog.ItemCatalog;
 import tblack.preventcraft.permissions.PermissionHolderSnapshot;
 import tblack.preventcraft.permissions.PermissionService;
 import tblack.preventcraft.rule.PreventRule;
@@ -33,10 +34,12 @@ public final class CraftRestrictImporter {
 
     private final ConfigManager configManager;
     private final PermissionService permissionService;
+    private final ItemCatalog itemCatalog;
 
-    public CraftRestrictImporter(ConfigManager configManager, PermissionService permissionService) {
+    public CraftRestrictImporter(ConfigManager configManager, PermissionService permissionService, ItemCatalog itemCatalog) {
         this.configManager = configManager;
         this.permissionService = permissionService;
+        this.itemCatalog = itemCatalog;
     }
 
     public CraftRestrictImportResult importRules(CraftRestrictMode mode, boolean dryRun, boolean includeUsers) {
@@ -52,6 +55,8 @@ public final class CraftRestrictImporter {
         int skippedWildcards = 0;
         int skippedUnknown = 0;
         JsonArray reportRules = new JsonArray();
+        Set<String> unresolvedItemIds = new LinkedHashSet<>();
+        int correctedItemTargets = canonicalizeExistingItemTargets(config);
         Set<String> existing = existingKeys(config);
 
         if (effectiveMode == CraftRestrictMode.ALLOW) config.Mode = RestrictionMode.WHITELIST;
@@ -81,6 +86,19 @@ public final class CraftRestrictImporter {
                     continue;
                 }
 
+                String originalTarget = target;
+                boolean targetResolved = true;
+                if (type == RuleType.CRAFT_ITEM) {
+                    String resolvedTarget = itemCatalog.resolveItemId(target);
+                    if (resolvedTarget != null) {
+                        target = resolvedTarget;
+                    } else {
+                        target = target.toLowerCase(Locale.ROOT);
+                        unresolvedItemIds.add(target);
+                        targetResolved = false;
+                    }
+                }
+
                 PreventRule rule = new PreventRule();
                 rule.Enabled = true;
                 rule.Type = type;
@@ -100,21 +118,22 @@ public final class CraftRestrictImporter {
                 existing.add(key);
                 importedRules++;
                 config.Rules.add(rule);
-                reportRules.add(reportRule(holder, node, rule));
+                reportRules.add(reportRule(holder, node, originalTarget, targetResolved, rule));
             }
         }
 
         ConfigOperationResult save = dryRun
                 ? ConfigOperationResult.success(config, "Dry run complete")
                 : configManager.saveWithBackup(config, "before-craftrestrict-import");
-        Path reportFile = writeReport(dryRun, effectiveMode, includeUsers, snapshots.size(), scannedNodes, importedRules, skippedDuplicates, skippedWildcards, skippedUnknown, reportRules);
+        List<String> unresolved = List.copyOf(unresolvedItemIds);
+        Path reportFile = writeReport(dryRun, effectiveMode, includeUsers, snapshots.size(), scannedNodes, importedRules, skippedDuplicates, skippedWildcards, skippedUnknown, unresolved, correctedItemTargets, reportRules);
         if (!save.success()) {
-            return new CraftRestrictImportResult(false, dryRun, snapshots.size(), scannedNodes, importedRules, skippedDuplicates, skippedWildcards, skippedUnknown, save.message(), reportFile);
+            return new CraftRestrictImportResult(false, dryRun, snapshots.size(), scannedNodes, importedRules, skippedDuplicates, skippedWildcards, skippedUnknown, unresolved, correctedItemTargets, save.message(), reportFile);
         }
         String message = dryRun
                 ? "Dry run complete. No JSON changes were saved."
                 : "CraftRestrict migration complete. A backup was created before saving.";
-        return new CraftRestrictImportResult(true, dryRun, snapshots.size(), scannedNodes, importedRules, skippedDuplicates, skippedWildcards, skippedUnknown, message, reportFile);
+        return new CraftRestrictImportResult(true, dryRun, snapshots.size(), scannedNodes, importedRules, skippedDuplicates, skippedWildcards, skippedUnknown, unresolved, correctedItemTargets, message, reportFile);
     }
 
     private boolean isWildcard(String node) {
@@ -135,6 +154,20 @@ public final class CraftRestrictImporter {
         return keys;
     }
 
+    private int canonicalizeExistingItemTargets(PreventCraftConfig config) {
+        if (config.Rules == null) return 0;
+        int corrected = 0;
+        for (PreventRule rule : config.Rules) {
+            if (rule == null || rule.Type != RuleType.CRAFT_ITEM || rule.Target == null) continue;
+            String resolved = itemCatalog.resolveItemId(rule.Target);
+            if (resolved != null && !resolved.equals(rule.Target)) {
+                rule.Target = resolved;
+                corrected++;
+            }
+        }
+        return corrected;
+    }
+
     private String key(PreventRule rule) {
         return (rule.Type + "|" + rule.Target + "|" + rule.Scope + "|" + rule.Group + "|" + rule.Player).toLowerCase(Locale.ROOT);
     }
@@ -145,12 +178,14 @@ public final class CraftRestrictImporter {
         return base.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9._-]", "-");
     }
 
-    private JsonObject reportRule(PermissionHolderSnapshot holder, String node, PreventRule rule) {
+    private JsonObject reportRule(PermissionHolderSnapshot holder, String node, String originalTarget, boolean targetResolved, PreventRule rule) {
         JsonObject json = new JsonObject();
         json.addProperty("holderKind", holder.kind());
         json.addProperty("holderName", holder.name());
         if (holder.uuid() != null) json.addProperty("holderUuid", holder.uuid().toString());
         json.addProperty("node", node);
+        json.addProperty("originalTarget", originalTarget);
+        json.addProperty("targetResolved", targetResolved);
         json.addProperty("ruleId", rule.Id);
         json.addProperty("type", rule.Type.name());
         json.addProperty("target", rule.Target);
@@ -159,7 +194,7 @@ public final class CraftRestrictImporter {
         return json;
     }
 
-    private Path writeReport(boolean dryRun, CraftRestrictMode mode, boolean includeUsers, int scannedHolders, int scannedNodes, int importedRules, int skippedDuplicates, int skippedWildcards, int skippedUnknown, JsonArray rules) {
+    private Path writeReport(boolean dryRun, CraftRestrictMode mode, boolean includeUsers, int scannedHolders, int scannedNodes, int importedRules, int skippedDuplicates, int skippedWildcards, int skippedUnknown, List<String> unresolvedItemIds, int correctedItemTargets, JsonArray rules) {
         try {
             Files.createDirectories(configManager.reportsDirectory());
             JsonObject root = new JsonObject();
@@ -172,6 +207,11 @@ public final class CraftRestrictImporter {
             root.addProperty("skippedDuplicates", skippedDuplicates);
             root.addProperty("skippedWildcards", skippedWildcards);
             root.addProperty("skippedUnknown", skippedUnknown);
+            root.addProperty("unresolvedItemCount", unresolvedItemIds.size());
+            root.addProperty("correctedExistingItemTargets", correctedItemTargets);
+            JsonArray unresolved = new JsonArray();
+            for (String itemId : unresolvedItemIds) unresolved.add(itemId);
+            root.add("unresolvedItemIds", unresolved);
             root.add("rules", rules);
             Path report = configManager.reportsDirectory().resolve("craftrestrict-import-" + FORMAT.format(Instant.now()) + (dryRun ? "-dry-run" : "") + ".json");
             Gson gson = configManager.gson();

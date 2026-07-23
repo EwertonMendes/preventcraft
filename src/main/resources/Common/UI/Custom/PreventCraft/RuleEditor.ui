@@ -2,8 +2,7 @@ $Common = "../Common.ui";
 
 @BottomDropdownStyle = DropdownBoxStyle(
   ...$Common.@DefaultDropdownBoxStyle,
-  PanelAlign: Bottom,
-  PanelWidth: 720
+  PanelAlign: Bottom
 );
 
 $Common.@PageOverlay {
@@ -26,16 +25,20 @@ $Common.@PageOverlay {
       $Common.@TextField #RuleIdField { Anchor: (Height: 38, Bottom: 12); PlaceholderText: "block-crude-arrow"; MaxLength: 96; }
 
       Label #TypeLabel { Style: $Common.@DefaultLabelStyle; Anchor: (Height: 22, Bottom: 5); Text: "Rule type"; }
-      $Common.@DropdownBox #TypeDropdown { Anchor: (Width: 720, Height: 34, Bottom: 12); Style: @BottomDropdownStyle; }
+      $Common.@DropdownBox #TypeDropdown { Anchor: (Height: 34, Bottom: 12); Style: @BottomDropdownStyle; }
 
       Label #ActionLabel { Style: $Common.@DefaultLabelStyle; Anchor: (Height: 22, Bottom: 5); Text: "Action"; }
-      $Common.@DropdownBox #ActionDropdown { Anchor: (Width: 720, Height: 34, Bottom: 12); Style: @BottomDropdownStyle; }
+      $Common.@DropdownBox #ActionDropdown { Anchor: (Height: 34, Bottom: 12); Style: @BottomDropdownStyle; }
 
       Label #ScopeLabel { Style: $Common.@DefaultLabelStyle; Anchor: (Height: 22, Bottom: 5); Text: "Scope"; }
-      $Common.@DropdownBox #ScopeDropdown { Anchor: (Width: 720, Height: 34, Bottom: 12); Style: @BottomDropdownStyle; }
+      $Common.@DropdownBox #ScopeDropdown { Anchor: (Height: 34, Bottom: 12); Style: @BottomDropdownStyle; }
 
       Label #TargetLabel { Style: $Common.@DefaultLabelStyle; Anchor: (Height: 22, Bottom: 5); Text: "Target"; }
       Group #TargetRow { Anchor: (Height: 44, Bottom: 12); LayoutMode: Left;
+        Group #TargetIconPanel { Anchor: (Width: 44, Height: 38, Right: 8); LayoutMode: Center; Background: #142437(0.92); OutlineColor: #55728f(0.72); OutlineSize: 1; Visible: false;
+          ItemIcon #TargetIcon { Anchor: (Width: 38, Height: 34); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; }
+          Label #TargetKindIcon { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 40, Height: 34); Text: "ITEM"; Visible: false; }
+        }
         $Common.@TextField #TargetField { Anchor: (Height: 38, Right: 8); FlexWeight: 1; PlaceholderText: "Item id or bench id"; MaxLength: 256; }
         $Common.@SecondaryTextButton #PickTargetButton { @Text = "Search target"; Anchor: (Width: 170, Height: 40); }
       }
@@ -65,9 +68,10 @@ $Common.@PageOverlay {
       Group #FooterRow { Anchor: (Height: 50); LayoutMode: Left;
         $Common.@SecondaryTextButton #BackButton { @Text = "Back"; Anchor: (Width: 140, Height: 44, Right: 10); }
         $Common.@TextButton #SaveButton { @Text = "Save rule"; Anchor: (Height: 44, Right: 10); FlexWeight: 1; }
-        $Common.@CancelTextButton #DeleteButton { @Text = "Delete"; Anchor: (Width: 160, Height: 44, Right: 10); }
-        $Common.@CancelTextButton #ClosePageButton { @Text = "Close"; Anchor: (Width: 140, Height: 44); }
+        $Common.@CancelTextButton #DeleteButton { @Text = "Delete"; Anchor: (Width: 160, Height: 44); }
       }
     }
+
+    $Common.@CloseButton #ClosePageButton { Anchor: (Top: -10, Right: -10, Width: 32, Height: 32); }
   }
 }

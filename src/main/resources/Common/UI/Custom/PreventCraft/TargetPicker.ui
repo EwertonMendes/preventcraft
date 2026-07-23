@@ -19,188 +19,203 @@ $Common.@PageOverlay {
       Padding: (Top: 14, Bottom: 14, Left: 18, Right: 18);
 
       Label #Subtitle {
-        Style: (...$Common.@DefaultLabelStyle, FontSize: 13, Wrap: true, TextColor: #96a9be);
-        Anchor: (Height: 38, Bottom: 12);
+        Style: (...$Common.@DefaultLabelStyle, FontSize: 13, Wrap: true, HorizontalAlignment: Center, TextColor: #96a9be);
+        Anchor: (Height: 38, Bottom: 10);
         Text: "Busque qualquer item ou bancada pelo nome ou ID.";
       }
 
       Group #SearchRow {
         Anchor: (Height: 44, Bottom: 10);
         LayoutMode: Left;
-        $Common.@TextField #SearchField { FlexWeight: 1; Anchor: (Height: 38, Right: 8); PlaceholderText: "Name or id"; MaxLength: 80; }
-        $Common.@TextButton #SearchButton { @Text = "Buscar"; Anchor: (Width: 140, Height: 40, Right: 8); }
+        $Common.@TextField #SearchField { FlexWeight: 1; Anchor: (Height: 38, Right: 8); PlaceholderText: "Nome ou ID"; MaxLength: 80; }
+        $Common.@TextButton #SearchButton { @Text = "Buscar"; Anchor: (Width: 120, Height: 40, Right: 8); }
         $Common.@TertiaryTextButton #ClearSearchButton { @Text = "Limpar"; Anchor: (Width: 120, Height: 40); }
       }
 
-      Label #ResultsLabel { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 24, Bottom: 8); Text: "Resultados"; }
+      Group #Grid {
+        Anchor: (Height: 512, Bottom: 8);
+        LayoutMode: Top;
+        Padding: (Top: 8, Bottom: 8, Left: 8, Right: 8);
+        Background: #142437(0.58);
+        OutlineColor: #45617d(0.58);
+        OutlineSize: 1;
 
-      Group #ResultsScroll {
-        FlexWeight: 1;
-        LayoutMode: TopScrolling;
-        ScrollbarStyle: $Common.@DefaultScrollbarStyle;
-        KeepScrollPosition: true;
-        Padding: (Right: 10);
+        Group #IconRow0 {
+          Anchor: (Height: 120, Bottom: 4);
+          LayoutMode: Left;
+          Padding: (Left: 29, Right: 29);
+          Group #IconCell0 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton0 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot0 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind0 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName0 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId0 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell1 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton1 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot1 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind1 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName1 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId1 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell2 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton2 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot2 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind2 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName2 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId2 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell3 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton3 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot3 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind3 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName3 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId3 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell4 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton4 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot4 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind4 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName4 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId4 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell5 { Anchor: (Width: 140, Height: 120); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton5 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot5 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind5 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName5 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId5 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+        }
 
-        Group #ResultRow0 {
-          Anchor: (Height: 82, Bottom: 8);
+        Group #IconRow1 {
+          Anchor: (Height: 120, Bottom: 4);
           LayoutMode: Left;
-          Padding: (Top: 7, Bottom: 7, Left: 10, Right: 10);
-          Background: #1d3044(0.76);
-          OutlineColor: #45617d(0.78);
-          OutlineSize: 1;
-          Group #ResultIconPanel0 {
-            Anchor: (Width: 58, Height: 58, Top: 5, Right: 12);
-            LayoutMode: Center;
-            Background: #142437(0.92);
-            OutlineColor: #55728f(0.72);
-            OutlineSize: 1;
-            ItemIcon #ResultIcon0 { Anchor: (Width: 48, Height: 46); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
-            Label #ResultKindIcon0 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 52, Height: 42); Text: "ITEM"; }
+          Padding: (Left: 29, Right: 29);
+          Group #IconCell6 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton6 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot6 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind6 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName6 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId6 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
           }
-          Group #ResultText0 { FlexWeight: 1; Anchor: (Height: 64, Right: 12); LayoutMode: Top;
-            Label #ResultName0 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 28); Text: "Name"; }
-            Label #ResultId0 { Style: (...$Common.@DefaultLabelStyle, FontSize: 11, TextColor: #8fa5bb); Anchor: (Height: 28); Text: "id"; }
+          Group #IconCell7 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton7 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot7 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind7 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName7 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId7 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
           }
-          $Common.@TextButton #SelectButton0 { @Text = "Selecionar"; Anchor: (Width: 150, Height: 42, Top: 13); }
+          Group #IconCell8 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton8 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot8 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind8 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName8 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId8 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell9 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton9 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot9 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind9 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName9 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId9 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell10 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton10 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot10 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind10 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName10 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId10 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell11 { Anchor: (Width: 140, Height: 120); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton11 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot11 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind11 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName11 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId11 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
         }
-        Group #ResultRow1 {
-          Anchor: (Height: 82, Bottom: 8);
+
+        Group #IconRow2 {
+          Anchor: (Height: 120, Bottom: 4);
           LayoutMode: Left;
-          Padding: (Top: 7, Bottom: 7, Left: 10, Right: 10);
-          Background: #1d3044(0.76);
-          OutlineColor: #45617d(0.78);
-          OutlineSize: 1;
-          Group #ResultIconPanel1 {
-            Anchor: (Width: 58, Height: 58, Top: 5, Right: 12);
-            LayoutMode: Center;
-            Background: #142437(0.92);
-            OutlineColor: #55728f(0.72);
-            OutlineSize: 1;
-            ItemIcon #ResultIcon1 { Anchor: (Width: 48, Height: 46); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
-            Label #ResultKindIcon1 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 52, Height: 42); Text: "ITEM"; }
+          Padding: (Left: 29, Right: 29);
+          Group #IconCell12 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton12 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot12 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind12 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName12 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId12 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
           }
-          Group #ResultText1 { FlexWeight: 1; Anchor: (Height: 64, Right: 12); LayoutMode: Top;
-            Label #ResultName1 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 28); Text: "Name"; }
-            Label #ResultId1 { Style: (...$Common.@DefaultLabelStyle, FontSize: 11, TextColor: #8fa5bb); Anchor: (Height: 28); Text: "id"; }
+          Group #IconCell13 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton13 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot13 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind13 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName13 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId13 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
           }
-          $Common.@TextButton #SelectButton1 { @Text = "Selecionar"; Anchor: (Width: 150, Height: 42, Top: 13); }
+          Group #IconCell14 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton14 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot14 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind14 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName14 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId14 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell15 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton15 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot15 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind15 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName15 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId15 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell16 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton16 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot16 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind16 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName16 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId16 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell17 { Anchor: (Width: 140, Height: 120); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton17 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot17 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind17 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName17 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId17 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
         }
-        Group #ResultRow2 {
-          Anchor: (Height: 82, Bottom: 8);
+
+        Group #IconRow3 {
+          Anchor: (Height: 120);
           LayoutMode: Left;
-          Padding: (Top: 7, Bottom: 7, Left: 10, Right: 10);
-          Background: #1d3044(0.76);
-          OutlineColor: #45617d(0.78);
-          OutlineSize: 1;
-          Group #ResultIconPanel2 {
-            Anchor: (Width: 58, Height: 58, Top: 5, Right: 12);
-            LayoutMode: Center;
-            Background: #142437(0.92);
-            OutlineColor: #55728f(0.72);
-            OutlineSize: 1;
-            ItemIcon #ResultIcon2 { Anchor: (Width: 48, Height: 46); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
-            Label #ResultKindIcon2 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 52, Height: 42); Text: "ITEM"; }
+          Padding: (Left: 29, Right: 29);
+          Group #IconCell18 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton18 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot18 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind18 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName18 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId18 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
           }
-          Group #ResultText2 { FlexWeight: 1; Anchor: (Height: 64, Right: 12); LayoutMode: Top;
-            Label #ResultName2 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 28); Text: "Name"; }
-            Label #ResultId2 { Style: (...$Common.@DefaultLabelStyle, FontSize: 11, TextColor: #8fa5bb); Anchor: (Height: 28); Text: "id"; }
+          Group #IconCell19 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton19 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot19 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind19 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName19 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId19 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
           }
-          $Common.@TextButton #SelectButton2 { @Text = "Selecionar"; Anchor: (Width: 150, Height: 42, Top: 13); }
+          Group #IconCell20 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton20 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot20 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind20 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName20 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId20 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell21 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton21 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot21 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind21 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName21 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId21 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell22 { Anchor: (Width: 140, Height: 120, Right: 10); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton22 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot22 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind22 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName22 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId22 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
+          Group #IconCell23 { Anchor: (Width: 140, Height: 120); Padding: (Top: 7, Bottom: 6, Left: 6, Right: 6); LayoutMode: Top; Background: #1d3044(0.82); OutlineColor: #45617d(0.72); OutlineSize: 1;
+            Button #IconButton23 { Anchor: (Height: 64, Bottom: 4); LayoutMode: Center; Background: #142437(0.94); OutlineColor: #55728f(0.72); OutlineSize: 1; ItemIcon #IconSlot23 { Anchor: (Width: 58, Height: 54); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; } Label #IconKind23 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 112, Height: 54); Text: "ITEM"; Visible: false; } }
+            Label #IconName23 { Style: (...$Common.@DefaultLabelStyle, FontSize: 9, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center); Anchor: (Height: 24); Text: "Item"; }
+            Label #IconId23 { Style: (...$Common.@DefaultLabelStyle, FontSize: 8, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #8398ad); Anchor: (Height: 14); Text: "Item_Id"; }
+          }
         }
-        Group #ResultRow3 {
-          Anchor: (Height: 82, Bottom: 8);
-          LayoutMode: Left;
-          Padding: (Top: 7, Bottom: 7, Left: 10, Right: 10);
-          Background: #1d3044(0.76);
-          OutlineColor: #45617d(0.78);
-          OutlineSize: 1;
-          Group #ResultIconPanel3 {
-            Anchor: (Width: 58, Height: 58, Top: 5, Right: 12);
-            LayoutMode: Center;
-            Background: #142437(0.92);
-            OutlineColor: #55728f(0.72);
-            OutlineSize: 1;
-            ItemIcon #ResultIcon3 { Anchor: (Width: 48, Height: 46); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
-            Label #ResultKindIcon3 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 52, Height: 42); Text: "ITEM"; }
-          }
-          Group #ResultText3 { FlexWeight: 1; Anchor: (Height: 64, Right: 12); LayoutMode: Top;
-            Label #ResultName3 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 28); Text: "Name"; }
-            Label #ResultId3 { Style: (...$Common.@DefaultLabelStyle, FontSize: 11, TextColor: #8fa5bb); Anchor: (Height: 28); Text: "id"; }
-          }
-          $Common.@TextButton #SelectButton3 { @Text = "Selecionar"; Anchor: (Width: 150, Height: 42, Top: 13); }
-        }
-        Group #ResultRow4 {
-          Anchor: (Height: 82, Bottom: 8);
-          LayoutMode: Left;
-          Padding: (Top: 7, Bottom: 7, Left: 10, Right: 10);
-          Background: #1d3044(0.76);
-          OutlineColor: #45617d(0.78);
-          OutlineSize: 1;
-          Group #ResultIconPanel4 {
-            Anchor: (Width: 58, Height: 58, Top: 5, Right: 12);
-            LayoutMode: Center;
-            Background: #142437(0.92);
-            OutlineColor: #55728f(0.72);
-            OutlineSize: 1;
-            ItemIcon #ResultIcon4 { Anchor: (Width: 48, Height: 46); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
-            Label #ResultKindIcon4 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 52, Height: 42); Text: "ITEM"; }
-          }
-          Group #ResultText4 { FlexWeight: 1; Anchor: (Height: 64, Right: 12); LayoutMode: Top;
-            Label #ResultName4 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 28); Text: "Name"; }
-            Label #ResultId4 { Style: (...$Common.@DefaultLabelStyle, FontSize: 11, TextColor: #8fa5bb); Anchor: (Height: 28); Text: "id"; }
-          }
-          $Common.@TextButton #SelectButton4 { @Text = "Selecionar"; Anchor: (Width: 150, Height: 42, Top: 13); }
-        }
-        Group #ResultRow5 {
-          Anchor: (Height: 82, Bottom: 8);
-          LayoutMode: Left;
-          Padding: (Top: 7, Bottom: 7, Left: 10, Right: 10);
-          Background: #1d3044(0.76);
-          OutlineColor: #45617d(0.78);
-          OutlineSize: 1;
-          Group #ResultIconPanel5 {
-            Anchor: (Width: 58, Height: 58, Top: 5, Right: 12);
-            LayoutMode: Center;
-            Background: #142437(0.92);
-            OutlineColor: #55728f(0.72);
-            OutlineSize: 1;
-            ItemIcon #ResultIcon5 { Anchor: (Width: 48, Height: 46); ItemId: "Ingredient_Stick"; ShowItemTooltip: false; HitTestVisible: false; Visible: false; }
-            Label #ResultKindIcon5 { Style: (...$Common.@DefaultLabelStyle, FontSize: 10, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9d27e); Anchor: (Width: 52, Height: 42); Text: "ITEM"; }
-          }
-          Group #ResultText5 { FlexWeight: 1; Anchor: (Height: 64, Right: 12); LayoutMode: Top;
-            Label #ResultName5 { Style: (...$Common.@DefaultLabelStyle, RenderBold: true); Anchor: (Height: 28); Text: "Name"; }
-            Label #ResultId5 { Style: (...$Common.@DefaultLabelStyle, FontSize: 11, TextColor: #8fa5bb); Anchor: (Height: 28); Text: "id"; }
-          }
-          $Common.@TextButton #SelectButton5 { @Text = "Selecionar"; Anchor: (Width: 150, Height: 42, Top: 13); }
-        }
+
         Label #NoResultsLabel {
-          Style: (...$Common.@DefaultLabelStyle, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #e9b65f);
-          Anchor: (Height: 42, Bottom: 8);
-          Text: "";
+          Style: (...$Common.@DefaultLabelStyle, Wrap: true, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #96a9be);
+          FlexWeight: 1;
+          Anchor: (Height: 54);
+          Text: "Nenhum resultado";
           Visible: false;
         }
       }
 
-      Group #Footer {
-        Anchor: (Height: 82, Top: 8);
-        LayoutMode: Top;
+      Group #ResultRow {
+        Anchor: (Height: 28, Bottom: 6);
+        LayoutMode: Left;
+        Label #ResultLabel { Style: (...$Common.@DefaultLabelStyle, FontSize: 12, TextColor: #96a9be); FlexWeight: 1; Anchor: (Height: 24); Text: "0 resultados"; }
+      }
 
-        Label #StatusLabel {
-          Style: (...$Common.@DefaultLabelStyle, Wrap: true, TextColor: #96d4ff);
-          Anchor: (Height: 30, Bottom: 6);
-          Text: "";
-        }
+      Group #PaginationRow {
+        Anchor: (Height: 42, Bottom: 8);
+        LayoutMode: Left;
+        $Common.@SecondaryTextButton #PreviousButton { @Text = "<"; Anchor: (Width: 120, Height: 38); }
+        Label #PageLabel { Style: (...$Common.@DefaultLabelStyle, HorizontalAlignment: Center, VerticalAlignment: Center); FlexWeight: 1; Anchor: (Height: 38); Text: "Página 1 / 1"; }
+        $Common.@SecondaryTextButton #NextButton { @Text = ">"; Anchor: (Width: 120, Height: 38); }
+      }
 
-        Group #PagerRow {
-          Anchor: (Height: 48, Top: 6);
-          LayoutMode: Left;
-          $Common.@SecondaryTextButton #PreviousButton { @Text = "Anterior"; Anchor: (Width: 140, Height: 42, Right: 10); }
-          Label #PageLabel { Style: (...$Common.@DefaultLabelStyle, HorizontalAlignment: Center, VerticalAlignment: Center); FlexWeight: 1; Anchor: (Height: 42, Right: 10); Text: ""; }
-          $Common.@SecondaryTextButton #NextButton { @Text = "Próxima"; Anchor: (Width: 140, Height: 42, Right: 10); }
-          $Common.@SecondaryTextButton #BackButton { @Text = "Voltar"; Anchor: (Width: 140, Height: 42, Right: 10); }
-          $Common.@CancelTextButton #CloseButton { @Text = "Fechar"; Anchor: (Width: 140, Height: 42); }
-        }
+      Group { FlexWeight: 1; }
+      Group #BottomRow {
+        Anchor: (Height: 44);
+        LayoutMode: Left;
+        $Common.@SecondaryTextButton #BackButton { @Text = "Voltar"; Anchor: (Width: 150, Height: 40); }
+        Group { FlexWeight: 1; }
       }
     }
+
+    $Common.@CloseButton #CloseButton { Anchor: (Top: -10, Right: -10, Width: 32, Height: 32); }
   }
 }

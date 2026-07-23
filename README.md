@@ -27,7 +27,7 @@ That distinction matters because a server may want players to find a bench in th
 - Optional LuckPerms support for group rules and migration.
 - Bypass permissions for admins or trusted roles.
 - Server-side enforcement for actual crafting and bench usage.
-- Optional recipe hiding from crafting windows when the server can safely filter recipe packets.
+- Authoritative craft blocking through Hytale's cancellable `CraftRecipeEvent.Pre`, plus player-specific recipe visibility synchronized through Hytale's recipe asset updates before benches open.
 - Language files for the currently visible Hytale language list: English, Portuguese (Brazil), Russian, Ukrainian and Simplified Chinese.
 
 ## Commands
@@ -73,7 +73,7 @@ The generated config is intentionally small and readable:
 
 ```json
 {
-  "SchemaVersion": 1,
+  "SchemaVersion": 3,
   "Enabled": true,
   "Mode": "BLACKLIST",
   "HideBlockedRecipes": true,
@@ -229,4 +229,4 @@ Before publishing a real release:
 3. Build with `./gradlew clean build --no-build-cache --rerun-tasks --warning-mode all`.
 4. Test `/preventcraft`, rule creation, reload, backup and CraftRestrict dry-run import on a local server.
 5. Test at least one vanilla item, one vanilla bench and one modded bench if available.
-6. Confirm that rule denial messages and recipe hiding behave correctly on the target Hytale version.
+6. Confirm that blocked recipes are absent, direct craft attempts are still denied, and benches open immediately.

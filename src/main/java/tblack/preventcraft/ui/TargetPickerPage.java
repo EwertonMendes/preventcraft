@@ -26,7 +26,9 @@ import java.util.List;
 
 public final class TargetPickerPage extends InteractiveCustomUIPage<TargetPickerPage.PickerEventData> {
     private static final String LAYOUT = "PreventCraft/TargetPicker.ui";
-    private static final int PAGE_SIZE = 6;
+    private static final int COLUMNS = 6;
+    private static final int ROWS = 4;
+    private static final int PAGE_SIZE = COLUMNS * ROWS;
 
     private final PreventCraftPlugin plugin;
     private final PlayerRef viewerRef;
@@ -109,7 +111,7 @@ public final class TargetPickerPage extends InteractiveCustomUIPage<TargetPicker
         events.addEventBinding(CustomUIEventBindingType.Activating, "#PreviousButton", event("previous"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#NextButton", event("next"), false);
         for (int slot = 0; slot < PAGE_SIZE; slot++) {
-            events.addEventBinding(CustomUIEventBindingType.Activating, "#SelectButton" + slot, event("select:" + slot), false);
+            events.addEventBinding(CustomUIEventBindingType.Activating, "#IconButton" + slot, event("select:" + slot), false);
         }
     }
 
@@ -200,17 +202,13 @@ public final class TargetPickerPage extends InteractiveCustomUIPage<TargetPicker
         commands.set("#SearchField.PlaceholderText", I18n.translate(locale, "ui.target_picker.search_placeholder"));
         setText(commands, "#SearchButton", I18n.translate(locale, "ui.admin.search"));
         setText(commands, "#ClearSearchButton", I18n.translate(locale, "ui.admin.clear"));
-        setText(commands, "#ResultsLabel", I18n.translate(locale, "ui.target_picker.results"));
         setText(commands, "#BackButton", I18n.translate(locale, "ui.common.back"));
-        setText(commands, "#CloseButton", I18n.translate(locale, "ui.common.close"));
-        setText(commands, "#PreviousButton", I18n.translate(locale, "ui.common.previous"));
-        setText(commands, "#NextButton", I18n.translate(locale, "ui.common.next"));
-        commands.set("#StatusLabel.TextSpans", Message.raw(status == null || status.isBlank()
+        commands.set("#ResultLabel.TextSpans", Message.raw(status == null || status.isBlank()
                 ? I18n.translate(locale, "ui.target_picker.results_count", matches.size())
                 : status));
         commands.set("#PageLabel.TextSpans", Message.raw(I18n.translate(locale, "ui.target_picker.page", page + 1, lastPage() + 1, matches.size())));
-        commands.set("#PreviousButton.Visible", page > 0);
-        commands.set("#NextButton.Visible", page < lastPage());
+        commands.set("#PreviousButton.Disabled", page <= 0);
+        commands.set("#NextButton.Disabled", page >= lastPage());
 
         boolean empty = matches.isEmpty();
         commands.set("#NoResultsLabel.Visible", empty);
@@ -220,29 +218,37 @@ public final class TargetPickerPage extends InteractiveCustomUIPage<TargetPicker
         }
 
         int start = page * PAGE_SIZE;
+        for (int row = 0; row < ROWS; row++) {
+            commands.set("#IconRow" + row + ".Visible", start + row * COLUMNS < matches.size());
+        }
         for (int slot = 0; slot < PAGE_SIZE; slot++) {
             int index = start + slot;
             boolean visible = index >= 0 && index < matches.size();
-            commands.set("#ResultRow" + slot + ".Visible", visible);
+            commands.set("#IconCell" + slot + ".Visible", visible);
+            commands.set("#IconButton" + slot + ".Disabled", !visible);
             if (!visible) {
                 continue;
             }
             TargetEntry entry = matches.get(index);
             boolean hasIcon = entry.iconItemId() != null && !entry.iconItemId().isBlank();
-            commands.set("#ResultIcon" + slot + ".Visible", hasIcon);
-            commands.set("#ResultKindIcon" + slot + ".Visible", !hasIcon);
+            commands.set("#IconSlot" + slot + ".Visible", hasIcon);
+            commands.set("#IconKind" + slot + ".Visible", !hasIcon);
             if (hasIcon) {
-                commands.set("#ResultIcon" + slot + ".ItemId", entry.iconItemId());
+                commands.set("#IconSlot" + slot + ".ItemId", entry.iconItemId());
             }
-            commands.set("#ResultKindIcon" + slot + ".TextSpans", Message.raw(entry.kind()));
-            commands.set("#ResultName" + slot + ".TextSpans", Message.raw(entry.displayName()));
-            commands.set("#ResultId" + slot + ".TextSpans", Message.raw(entry.id()));
-            setText(commands, "#SelectButton" + slot, I18n.translate(locale, "ui.target_picker.select"));
+            commands.set("#IconKind" + slot + ".TextSpans", Message.raw(entry.kind()));
+            commands.set("#IconName" + slot + ".TextSpans", Message.raw(shorten(entry.displayName(), 34)));
+            commands.set("#IconId" + slot + ".TextSpans", Message.raw(shorten(entry.id(), 38)));
         }
     }
 
     private int lastPage() {
         return matches.isEmpty() ? 0 : Math.max(0, (matches.size() - 1) / PAGE_SIZE);
+    }
+
+    private String shorten(String value, int maximumLength) {
+        if (value == null || value.length() <= maximumLength) return value == null ? "" : value;
+        return value.substring(0, maximumLength - 1) + "…";
     }
 
     private void refreshPicker() {

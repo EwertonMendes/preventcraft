@@ -1,10 +1,16 @@
 package tblack.preventcraft;
 
 import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
+import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
+import com.hypixel.hytale.server.core.event.events.permissions.GroupPermissionChangeEvent;
+import com.hypixel.hytale.server.core.event.events.permissions.PlayerPermissionChangeEvent;
+import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
+import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import tblack.preventcraft.catalog.HytaleBenchCatalog;
@@ -16,12 +22,18 @@ import tblack.preventcraft.config.PreventCraftConfig;
 import tblack.preventcraft.importer.CraftRestrictImportResult;
 import tblack.preventcraft.importer.CraftRestrictImporter;
 import tblack.preventcraft.importer.CraftRestrictMode;
-import tblack.preventcraft.packets.PacketManager;
+import tblack.preventcraft.feedback.NotificationService;
 import tblack.preventcraft.permissions.PermissionService;
 import tblack.preventcraft.rule.RuleService;
 import tblack.preventcraft.systems.BenchAccessSystem;
+import tblack.preventcraft.systems.CraftRestrictionSystem;
+import tblack.preventcraft.visibility.RecipeVisibilityService;
 
 import java.nio.file.Paths;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public final class PreventCraftPlugin extends JavaPlugin {
     public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -33,14 +45,20 @@ public final class PreventCraftPlugin extends JavaPlugin {
     private final HytaleItemCatalog itemCatalog = new HytaleItemCatalog();
     private final HytaleBenchCatalog benchCatalog = new HytaleBenchCatalog(itemCatalog);
     private final RuleService ruleService = new RuleService(permissionService, benchCatalog);
-    private final PacketManager packetManager = new PacketManager(this);
+    private final RecipeVisibilityService recipeVisibilityService = new RecipeVisibilityService(ruleService, permissionService);
     private final CraftRestrictImporter craftRestrictImporter;
+    private final ScheduledExecutorService assetRefreshExecutor = Executors.newSingleThreadScheduledExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "PreventCraft-AssetRefresh");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private volatile ScheduledFuture<?> pendingAssetRefresh;
     private PreventCraftConfig config;
 
     public PreventCraftPlugin(JavaPluginInit init) {
         super(init);
         configManager = new ConfigManager(Paths.get("mods", ModConstants.MOD_FOLDER));
-        craftRestrictImporter = new CraftRestrictImporter(configManager, permissionService);
+        craftRestrictImporter = new CraftRestrictImporter(configManager, permissionService, itemCatalog);
     }
 
     @Override
@@ -53,13 +71,20 @@ public final class PreventCraftPlugin extends JavaPlugin {
         config = load.config();
         refreshRuntime(config);
         refreshPermissions();
+        permissionService.setAuthorizationListener(recipeVisibilityService::synchronize);
+        recipeVisibilityService.requestCatalogRebuild();
 
         getCommandRegistry().registerCommand(new PreventCraftCommand(this));
         registerSystems();
-        packetManager.register();
+        registerPlayerAuthorizationEvents();
+        permissionService.registerLuckPermsListener(this);
 
         getEventRegistry().register(LoadedAssetsEvent.class, Item.class, this::onItemAssetsLoaded);
         getEventRegistry().register(LoadedAssetsEvent.class, BlockType.class, this::onBlockAssetsLoaded);
+        getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, this::onRecipeAssetsLoaded);
+        getEventRegistry().register(RemovedAssetsEvent.class, Item.class, this::onItemAssetsRemoved);
+        getEventRegistry().register(RemovedAssetsEvent.class, BlockType.class, this::onBlockAssetsRemoved);
+        getEventRegistry().register(RemovedAssetsEvent.class, CraftingRecipe.class, this::onRecipeAssetsRemoved);
 
         if (!load.success()) {
             LOGGER.atWarning().log("Configuration load failed: %s", load.message());
@@ -69,7 +94,11 @@ public final class PreventCraftPlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
-        packetManager.unregister();
+        ScheduledFuture<?> refresh = pendingAssetRefresh;
+        if (refresh != null) refresh.cancel(false);
+        assetRefreshExecutor.shutdownNow();
+        recipeVisibilityService.shutdown();
+        permissionService.shutdown();
         super.shutdown();
     }
 
@@ -143,6 +172,8 @@ public final class PreventCraftPlugin extends JavaPlugin {
 
     private void refreshRuntime(PreventCraftConfig config) {
         ruleService.rebuild(config);
+        recipeVisibilityService.configure(config != null && config.HideBlockedRecipes);
+        recipeVisibilityService.synchronizeAll();
     }
 
     private void refreshPermissions() {
@@ -164,16 +195,70 @@ public final class PreventCraftPlugin extends JavaPlugin {
     private void registerSystems() {
         try {
             getEntityStoreRegistry().registerSystem(new BenchAccessSystem(this));
+            getEntityStoreRegistry().registerSystem(new CraftRestrictionSystem(this));
         } catch (Throwable throwable) {
-            LOGGER.atWarning().withCause(throwable).log("Bench access system could not be registered.");
+            LOGGER.atWarning().withCause(throwable).log("Gameplay restriction systems could not be registered.");
         }
+    }
+
+    private void registerPlayerAuthorizationEvents() {
+        getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> permissionService.playerReady(
+                event.getPlayerRef().getStore().getComponent(event.getPlayerRef(), com.hypixel.hytale.server.core.universe.PlayerRef.getComponentType())));
+        getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, event -> {
+            permissionService.playerDisconnected(event.getPlayerRef().getUuid());
+            recipeVisibilityService.playerDisconnected(event.getPlayerRef().getUuid());
+            NotificationService.clear(event.getPlayerRef().getUuid());
+        });
+        getEventRegistry().registerGlobal(PlayerPermissionChangeEvent.GroupAdded.class, event -> permissionService.refreshAuthorization(event.getPlayerUuid()));
+        getEventRegistry().registerGlobal(PlayerPermissionChangeEvent.GroupRemoved.class, event -> permissionService.refreshAuthorization(event.getPlayerUuid()));
+        getEventRegistry().registerGlobal(PlayerPermissionChangeEvent.PermissionsAdded.class, event -> permissionService.refreshAuthorization(event.getPlayerUuid()));
+        getEventRegistry().registerGlobal(PlayerPermissionChangeEvent.PermissionsRemoved.class, event -> permissionService.refreshAuthorization(event.getPlayerUuid()));
+        getEventRegistry().registerGlobal(GroupPermissionChangeEvent.Added.class, event -> permissionService.refreshAllAuthorizations());
+        getEventRegistry().registerGlobal(GroupPermissionChangeEvent.Removed.class, event -> permissionService.refreshAllAuthorizations());
     }
 
     private void onItemAssetsLoaded(LoadedAssetsEvent<String, Item, DefaultAssetMap<String, Item>> event) {
         itemCatalog.invalidate();
+        benchCatalog.invalidate();
+        scheduleAssetRefresh();
     }
 
     private void onBlockAssetsLoaded(LoadedAssetsEvent<String, BlockType, DefaultAssetMap<String, BlockType>> event) {
         benchCatalog.invalidate();
+        scheduleAssetRefresh();
+    }
+
+    private void onRecipeAssetsLoaded(LoadedAssetsEvent<String, CraftingRecipe, DefaultAssetMap<String, CraftingRecipe>> event) {
+        scheduleAssetRefresh();
+    }
+
+    private void onItemAssetsRemoved(RemovedAssetsEvent<String, Item, DefaultAssetMap<String, Item>> event) {
+        itemCatalog.invalidate();
+        benchCatalog.invalidate();
+        scheduleAssetRefresh();
+    }
+
+    private void onBlockAssetsRemoved(RemovedAssetsEvent<String, BlockType, DefaultAssetMap<String, BlockType>> event) {
+        benchCatalog.invalidate();
+        scheduleAssetRefresh();
+    }
+
+    private void onRecipeAssetsRemoved(RemovedAssetsEvent<String, CraftingRecipe, DefaultAssetMap<String, CraftingRecipe>> event) {
+        scheduleAssetRefresh();
+    }
+
+    private synchronized void scheduleAssetRefresh() {
+        ScheduledFuture<?> previous = pendingAssetRefresh;
+        if (previous != null) previous.cancel(false);
+        pendingAssetRefresh = assetRefreshExecutor.schedule(() -> {
+            try {
+                itemCatalog.size();
+                benchCatalog.size();
+                refreshRuntime(getPreventCraftConfig());
+                recipeVisibilityService.requestCatalogRebuild();
+            } catch (Throwable throwable) {
+                LOGGER.atFine().log("Catalog refresh deferred: %s", throwable.getMessage());
+            }
+        }, 250L, TimeUnit.MILLISECONDS);
     }
 }

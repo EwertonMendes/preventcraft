@@ -1,5 +1,5 @@
 {
-  "SchemaVersion": 1,
+  "SchemaVersion": 3,
   "Enabled": true,
   "Mode": "BLACKLIST",
   "HideBlockedRecipes": true,

@@ -1,23 +1,31 @@
 package tblack.preventcraft.rule;
 
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import tblack.preventcraft.ModConstants;
+import tblack.preventcraft.catalog.BenchCatalogEntry;
 import tblack.preventcraft.catalog.HytaleBenchCatalog;
 import tblack.preventcraft.config.PreventCraftConfig;
 import tblack.preventcraft.permissions.PermissionService;
+import tblack.preventcraft.permissions.PlayerAuthorizationSnapshot;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.LongAccumulator;
 
 public final class RuleService {
     private final PermissionService permissionService;
     private final HytaleBenchCatalog benchCatalog;
-    private final AtomicReference<CompiledRules> compiled = new AtomicReference<>(CompiledRules.empty());
+    private final AtomicReference<RuntimePolicy> policy = new AtomicReference<>(RuntimePolicy.empty());
+    private final AtomicReference<List<String>> adminSearchTexts = new AtomicReference<>(List.of());
+    private final AtomicLong decisionCount = new AtomicLong();
+    private final AtomicLong decisionNanos = new AtomicLong();
+    private final LongAccumulator maxDecisionNanos = new LongAccumulator(Long::max, 0L);
+    private volatile boolean metricsEnabled;
 
     public RuleService(PermissionService permissionService, HytaleBenchCatalog benchCatalog) {
         this.permissionService = permissionService;
@@ -25,168 +33,150 @@ public final class RuleService {
     }
 
     public void rebuild(PreventCraftConfig config) {
-        compiled.set(CompiledRules.from(config));
+        RuntimePolicy rebuilt = RuntimePolicy.compile(config, this::expandTargets);
+        policy.set(rebuilt);
+        adminSearchTexts.set(buildAdminSearchTexts(config));
+        metricsEnabled = config != null && config.Debug;
     }
 
     public int activeRuleCount() {
-        return compiled.get().rules().size();
+        return policy.get().rules().size();
+    }
+
+    public List<String> adminSearchTexts() {
+        return adminSearchTexts.get();
+    }
+
+    public PerformanceSnapshot performanceSnapshot() {
+        long count = decisionCount.get();
+        long total = decisionNanos.get();
+        return new PerformanceSnapshot(count, count == 0 ? 0L : total / count, maxDecisionNanos.get());
     }
 
     public RuleDecision decideCraft(PlayerRef playerRef, String outputItemId) {
+        if (!metricsEnabled) return decideCraftNow(playerRef, outputItemId);
+        long started = System.nanoTime();
+        try {
+            return decideCraftNow(playerRef, outputItemId);
+        } finally {
+            recordDecision(System.nanoTime() - started);
+        }
+    }
+
+    private RuleDecision decideCraftNow(PlayerRef playerRef, String outputItemId) {
+        return decideCraft(permissionService.cachedAuthorization(playerRef), outputItemId);
+    }
+
+    /** Evaluates a compiled authorization snapshot without touching a permission provider. */
+    public RuleDecision decideCraft(PlayerAuthorizationSnapshot authorization, String outputItemId) {
         String target = normalize(outputItemId);
         if (target.isBlank()) return RuleDecision.allowed("empty target");
-
-        RuleDecision itemDecision = decide(playerRef, RuleType.CRAFT_ITEM, target);
-        RuleDecision benchDecision = decideBenchCraft(playerRef, target);
-
-        if (itemDecision.rule() != null && !itemDecision.allowed()) return itemDecision;
-        if (benchDecision.rule() != null && !benchDecision.allowed()) return benchDecision;
-        if (itemDecision.rule() != null) return itemDecision;
-        if (benchDecision.rule() != null) return benchDecision;
-        if (!itemDecision.allowed()) return itemDecision;
-        if (!benchDecision.allowed()) return benchDecision;
-        return itemDecision;
+        RuntimePolicy current = policy.get();
+        if (!current.enabled()) return RuleDecision.allowed("mod disabled");
+        if (current.mode() == RestrictionMode.BLACKLIST
+                && !current.hasPotentialRule(RuleType.CRAFT_ITEM, target)
+                && !current.hasPotentialRule(RuleType.CRAFT_BENCH, target)) {
+            return RuleDecision.allowed("no configured rule");
+        }
+        RuleDecision itemDecision = current.decide(RuleType.CRAFT_ITEM, target, authorization);
+        RuleDecision benchDecision = current.decide(RuleType.CRAFT_BENCH, target, authorization);
+        return combine(itemDecision, benchDecision);
     }
 
     public RuleDecision decide(PlayerRef playerRef, RuleType type, String target) {
-        CompiledRules snapshot = compiled.get();
-        if (!snapshot.enabled()) return RuleDecision.allowed("mod disabled");
+        if (!metricsEnabled) return decideNow(playerRef, type, target);
+        long started = System.nanoTime();
+        try {
+            return decideNow(playerRef, type, target);
+        } finally {
+            recordDecision(System.nanoTime() - started);
+        }
+    }
+
+    private RuleDecision decideNow(PlayerRef playerRef, RuleType type, String target) {
+        RuntimePolicy current = policy.get();
         String normalizedTarget = normalize(target);
+        if (!current.enabled()) return RuleDecision.allowed("mod disabled");
         if (normalizedTarget.isBlank()) return RuleDecision.allowed("empty target");
-        if (hasBypass(playerRef, type)) return RuleDecision.allowed("bypass");
-
-        PreventRule selected = type == RuleType.ACCESS_BENCH
-                ? selectBenchRule(snapshot, playerRef, type, normalizedTarget)
-                : selectRule(snapshot, playerRef, type, normalizedTarget);
-        if (selected != null) {
-            return selected.Action == RuleAction.DENY
-                    ? RuleDecision.denied(selected, "matched rule " + selected.Id)
-                    : RuleDecision.allowed("matched rule " + selected.Id);
+        if (current.mode() == RestrictionMode.BLACKLIST && !current.hasPotentialRule(type, normalizedTarget)) {
+            return RuleDecision.allowed("no configured rule");
         }
-        boolean allowedByMode = snapshot.mode() == RestrictionMode.BLACKLIST;
-        return allowedByMode ? RuleDecision.allowed("blacklist default") : RuleDecision.denied(null, "whitelist default");
+        return current.decide(type, normalizedTarget, permissionService.cachedAuthorization(playerRef));
     }
 
-    public boolean shouldHideRecipe(PlayerRef playerRef, String recipeOutputItemId) {
-        CompiledRules snapshot = compiled.get();
-        return snapshot.hideBlockedRecipes() && !decideCraft(playerRef, recipeOutputItemId).allowed();
+    private RuleDecision combine(RuleDecision itemDecision, RuleDecision benchDecision) {
+        if (!itemDecision.allowed() && itemDecision.rule() != null) return itemDecision;
+        if (!benchDecision.allowed() && benchDecision.rule() != null) return benchDecision;
+        if (itemDecision.rule() != null) return itemDecision;
+        if (benchDecision.rule() != null) return benchDecision;
+        if (!itemDecision.allowed()) return itemDecision;
+        return !benchDecision.allowed() ? benchDecision : itemDecision;
     }
 
-    private RuleDecision decideBenchCraft(PlayerRef playerRef, String craftedItemId) {
-        CompiledRules snapshot = compiled.get();
-        if (!snapshot.enabled()) return RuleDecision.allowed("mod disabled");
-        if (hasBypass(playerRef, RuleType.CRAFT_BENCH)) return RuleDecision.allowed("bypass");
-        List<PreventRule> candidates = snapshot.rules().stream()
-                .filter(rule -> rule.Type == RuleType.CRAFT_BENCH)
-                .filter(rule -> benchCatalog.matchesCraftedBenchTarget(rule.Target, craftedItemId))
-                .toList();
-        PreventRule selected = selectRuleFromCandidates(snapshot, playerRef, candidates);
-        if (selected != null) {
-            return selected.Action == RuleAction.DENY
-                    ? RuleDecision.denied(selected, "matched rule " + selected.Id)
-                    : RuleDecision.allowed("matched rule " + selected.Id);
+    private Set<String> expandTargets(RuleType type, String target) {
+        LinkedHashSet<String> expanded = new LinkedHashSet<>();
+        expanded.add(target);
+        if (type == RuleType.CRAFT_BENCH) {
+            BenchCatalogEntry entry = benchCatalog.describe(target, "en-US");
+            if (entry != null) {
+                expanded.add(entry.benchId());
+                expanded.add(entry.blockId());
+                expanded.addAll(entry.aliases());
+                expanded.addAll(entry.craftItemIds());
+                if (entry.iconItemId() != null) expanded.add(entry.iconItemId());
+            }
+        } else if (type == RuleType.ACCESS_BENCH) {
+            BenchCatalogEntry entry = benchCatalog.describe(target, "en-US");
+            if (entry != null) {
+                expanded.add(entry.benchId());
+                expanded.add(entry.blockId());
+                expanded.addAll(entry.aliases());
+            }
         }
-        boolean allowedByMode = snapshot.mode() == RestrictionMode.BLACKLIST;
-        return allowedByMode ? RuleDecision.allowed("blacklist default") : RuleDecision.denied(null, "whitelist default");
+        return Set.copyOf(expanded);
     }
 
-    private PreventRule selectRule(CompiledRules snapshot, PlayerRef playerRef, RuleType type, String target) {
-        List<PreventRule> candidates = snapshot.rules().stream()
-                .filter(rule -> rule.Type == type)
-                .filter(rule -> normalize(rule.Target).equalsIgnoreCase(target))
-                .toList();
-        return selectRuleFromCandidates(snapshot, playerRef, candidates);
+    private void recordDecision(long nanos) {
+        decisionCount.incrementAndGet();
+        decisionNanos.addAndGet(nanos);
+        maxDecisionNanos.accumulate(nanos);
     }
 
-    private PreventRule selectBenchRule(CompiledRules snapshot, PlayerRef playerRef, RuleType type, String target) {
-        List<PreventRule> candidates = snapshot.rules().stream()
-                .filter(rule -> rule.Type == type)
-                .filter(rule -> benchCatalog.matchesBenchTarget(rule.Target, target))
-                .toList();
-        return selectRuleFromCandidates(snapshot, playerRef, candidates);
+    private List<String> buildAdminSearchTexts(PreventCraftConfig config) {
+        if (config == null || config.Rules == null || config.Rules.isEmpty()) return List.of();
+        List<String> texts = new ArrayList<>(config.Rules.size());
+        for (PreventRule rule : config.Rules) {
+            if (rule == null) {
+                texts.add("");
+                continue;
+            }
+            String targetWords = rule.Target == null ? "" : rule.Target.replace('_', ' ').replace('-', ' ');
+            String raw = String.join(" ",
+                    safeSearchValue(rule.Id),
+                    rule.Type == null ? "" : rule.Type.name(),
+                    rule.Action == null ? "" : rule.Action.name(),
+                    rule.Scope == null ? "" : rule.Scope.name(),
+                    safeSearchValue(rule.Target), targetWords,
+                    safeSearchValue(rule.Group), safeSearchValue(rule.Player), safeSearchValue(rule.Note));
+            texts.add(normalizeSearch(raw));
+        }
+        return List.copyOf(texts);
     }
 
-    private PreventRule selectRuleFromCandidates(CompiledRules snapshot, PlayerRef playerRef, List<PreventRule> candidates) {
-        if (candidates.isEmpty()) return null;
-        UUID uuid = null;
-        String username = null;
-        try {
-            uuid = playerRef.getUuid();
-            username = playerRef.getUsername();
-        } catch (Throwable ignored) {
-        }
-        Set<String> groups = permissionService.getGroups(playerRef);
-        List<ScoredRule> scored = new ArrayList<>();
-        for (PreventRule rule : candidates) {
-            int score = matchScore(rule, uuid, username, groups);
-            if (score > 0) scored.add(new ScoredRule(rule, score));
-        }
-        return scored.stream()
-                .max(Comparator
-                        .comparingInt(ScoredRule::score)
-                        .thenComparingInt(scoredRule -> scoredRule.rule().Action == RuleAction.DENY ? 1 : 0))
-                .map(ScoredRule::rule)
-                .orElse(null);
+    private String safeSearchValue(String value) {
+        return value == null ? "" : value;
     }
 
-    private int matchScore(PreventRule rule, UUID uuid, String username, Set<String> groups) {
-        if (rule.Scope == RuleScope.EVERYONE) return 1;
-        if (rule.Scope == RuleScope.GROUP) {
-            String group = normalizeGroup(rule.Group);
-            return !group.isBlank() && groups.contains(group) ? 2 : 0;
-        }
-        if (rule.Scope == RuleScope.PLAYER) {
-            String player = normalizePlayer(rule.Player);
-            if (player.isBlank()) return 0;
-            if (uuid != null && player.equalsIgnoreCase(uuid.toString())) return 3;
-            if (username != null && player.equalsIgnoreCase(username)) return 3;
-        }
-        return 0;
-    }
-
-    private boolean hasBypass(PlayerRef playerRef, RuleType type) {
-        if (playerRef == null) return false;
-        UUID uuid;
-        try {
-            uuid = playerRef.getUuid();
-        } catch (Throwable ignored) {
-            return false;
-        }
-        if (permissionService.hasPermission(uuid, ModConstants.BYPASS_PERMISSION)) return true;
-        if (type == RuleType.ACCESS_BENCH) return permissionService.hasPermission(uuid, ModConstants.BYPASS_BENCH_PERMISSION);
-        return permissionService.hasPermission(uuid, ModConstants.BYPASS_CRAFT_PERMISSION);
+    private String normalizeSearch(String value) {
+        String cleaned = value.replaceAll("\\p{Cntrl}", " ").trim();
+        String decomposed = Normalizer.normalize(cleaned, Normalizer.Form.NFD);
+        return decomposed.replaceAll("\\p{M}+", "").toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
     }
 
     private String normalize(String value) {
         return value == null ? "" : value.trim();
     }
 
-    private String normalizeGroup(String value) {
-        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private String normalizePlayer(String value) {
-        return value == null ? "" : value.trim();
-    }
-
-    private record ScoredRule(PreventRule rule, int score) {
-    }
-
-    private record CompiledRules(boolean enabled, RestrictionMode mode, boolean hideBlockedRecipes, List<PreventRule> rules) {
-        private static CompiledRules empty() {
-            return new CompiledRules(true, RestrictionMode.BLACKLIST, true, List.of());
-        }
-
-        private static CompiledRules from(PreventCraftConfig config) {
-            if (config == null) return empty();
-            List<PreventRule> active = new ArrayList<>();
-            if (config.Rules != null) {
-                for (PreventRule rule : config.Rules) {
-                    if (rule == null || !rule.Enabled || rule.Target == null || rule.Target.isBlank()) continue;
-                    active.add(rule.copy());
-                }
-            }
-            return new CompiledRules(config.Enabled, config.Mode == null ? RestrictionMode.BLACKLIST : config.Mode, config.HideBlockedRecipes, List.copyOf(active));
-        }
+    public record PerformanceSnapshot(long decisions, long averageNanos, long maximumNanos) {
     }
 }

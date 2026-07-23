@@ -25,16 +25,15 @@ public final class HytaleItemCatalog implements ItemCatalog {
 
     @Override
     public boolean isValidItemId(String itemId) {
+        return resolveItemId(itemId) != null;
+    }
+
+    @Override
+    public String resolveItemId(String itemId) {
         String normalized = normalizeItemId(itemId);
-        if (normalized == null) return false;
-        try {
-            DefaultAssetMap<String, Item> itemMap = Item.getAssetMap();
-            if (itemMap == null) return false;
-            Item item = itemMap.getAsset(normalized);
-            return item != null && item != Item.UNKNOWN;
-        } catch (RuntimeException exception) {
-            return false;
-        }
+        if (normalized == null) return null;
+        refreshRegistryIfNeeded();
+        return registry.byLookupId().get(normalized.toLowerCase(Locale.ROOT));
     }
 
     @Override
@@ -59,9 +58,9 @@ public final class HytaleItemCatalog implements ItemCatalog {
 
     @Override
     public ItemCatalogEntry describe(String itemId, String locale) {
-        String normalized = normalizeItemId(itemId);
-        if (normalized == null || !isValidItemId(normalized)) return null;
-        return localizedSnapshot(locale).byItemId().get(normalized);
+        String resolved = resolveItemId(itemId);
+        if (resolved == null) return null;
+        return localizedSnapshot(locale).byItemId().get(resolved);
     }
 
     @Override
@@ -189,7 +188,7 @@ public final class HytaleItemCatalog implements ItemCatalog {
 
         localizedSnapshots.clear();
         if (assets == null || assets.isEmpty()) {
-            registry = new RegistrySnapshot(List.of(), registrySize, mapIdentity);
+            registry = new RegistrySnapshot(List.of(), Map.of(), registrySize, mapIdentity);
             return;
         }
 
@@ -208,7 +207,16 @@ public final class HytaleItemCatalog implements ItemCatalog {
         }
 
         entries.sort(Comparator.comparing(BaseEntry::itemId, String.CASE_INSENSITIVE_ORDER));
-        registry = new RegistrySnapshot(Collections.unmodifiableList(entries), registrySize, mapIdentity);
+        Map<String, String> byLookupId = new LinkedHashMap<>(entries.size());
+        for (BaseEntry entry : entries) {
+            byLookupId.putIfAbsent(entry.itemId().toLowerCase(Locale.ROOT), entry.itemId());
+        }
+        registry = new RegistrySnapshot(
+                Collections.unmodifiableList(entries),
+                Collections.unmodifiableMap(byLookupId),
+                registrySize,
+                mapIdentity
+        );
     }
 
     private String normalizeItemId(String rawItemId) {
@@ -255,9 +263,14 @@ public final class HytaleItemCatalog implements ItemCatalog {
     private record BaseEntry(String itemId, String translationKey) {
     }
 
-    private record RegistrySnapshot(List<BaseEntry> entries, int registrySize, int mapIdentity) {
+    private record RegistrySnapshot(
+            List<BaseEntry> entries,
+            Map<String, String> byLookupId,
+            int registrySize,
+            int mapIdentity
+    ) {
         private static RegistrySnapshot empty() {
-            return new RegistrySnapshot(List.of(), -1, -1);
+            return new RegistrySnapshot(List.of(), Map.of(), -1, -1);
         }
 
         private boolean matches(int currentRegistrySize, int currentMapIdentity) {

@@ -8,17 +8,45 @@ import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import tblack.preventcraft.config.PreventCraftConfig;
 import tblack.preventcraft.i18n.I18n;
 
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 public final class NotificationService {
+    private static final long MIN_INTERVAL_MILLIS = 750L;
+    private static final Map<NotificationKey, Long> LAST_SENT = new ConcurrentHashMap<>();
+
     private NotificationService() {
     }
 
     public static void sendDenied(PlayerRef playerRef, PreventCraftConfig config, DenialKind kind) {
         if (playerRef == null || config == null || config.Feedback == null) return;
+        if (!acquire(playerRef, kind)) return;
         if (shouldSendMessage(config, kind)) {
             String message = message(playerRef, config, kind);
             if (message != null && !message.isBlank()) playerRef.sendMessage(Message.raw(message).color("#FF6B81"));
         }
         if (config.Feedback.SendDeniedSound) playDeniedSound(playerRef, config.Feedback.DeniedSound);
+    }
+
+    private static boolean acquire(PlayerRef playerRef, DenialKind kind) {
+        UUID uuid;
+        try {
+            uuid = playerRef.getUuid();
+        } catch (Throwable ignored) {
+            return true;
+        }
+        long now = System.currentTimeMillis();
+        NotificationKey key = new NotificationKey(uuid, kind);
+        Long previous = LAST_SENT.get(key);
+        if (previous != null && now - previous < MIN_INTERVAL_MILLIS) return false;
+        LAST_SENT.put(key, now);
+        return true;
+    }
+
+    public static void clear(UUID uuid) {
+        if (uuid == null) return;
+        for (DenialKind kind : DenialKind.values()) LAST_SENT.remove(new NotificationKey(uuid, kind));
     }
 
     private static boolean shouldSendMessage(PreventCraftConfig config, DenialKind kind) {
@@ -59,5 +87,8 @@ public final class NotificationService {
             SoundUtil.playSoundEvent2dToPlayer(playerRef, index, SoundCategory.UI);
         } catch (Throwable ignored) {
         }
+    }
+
+    private record NotificationKey(UUID uuid, DenialKind kind) {
     }
 }

@@ -48,6 +48,9 @@ configurations {
 dependencies {
     compileOnly files(serverJarPath)
     compileOnly 'org.checkerframework:checker-qual:3.42.0'
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // JSON configuration support used by ConfigManager.
     shade 'com.google.code.gson:gson:2.13.1'
@@ -60,6 +63,10 @@ dependencies {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.compilerArgs += ['--enable-preview']
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
 }
 
 def manifestTokens = [

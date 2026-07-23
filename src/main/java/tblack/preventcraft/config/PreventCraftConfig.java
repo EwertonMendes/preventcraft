@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class PreventCraftConfig {
-    public static final int CURRENT_SCHEMA_VERSION = 1;
+    public static final int CURRENT_SCHEMA_VERSION = 3;
     public static final int MAX_RULES = 10000;
 
     @SerializedName("SchemaVersion")

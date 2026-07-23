@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.ui.LocalizableString;
 import tblack.preventcraft.PreventCraftPlugin;
+import tblack.preventcraft.catalog.BenchCatalogEntry;
 import tblack.preventcraft.config.ConfigOperationResult;
 import tblack.preventcraft.config.PreventCraftConfig;
 import tblack.preventcraft.i18n.I18n;
@@ -132,7 +133,6 @@ public final class RuleEditorPage extends InteractiveCustomUIPage<RuleEditorPage
         setText(commands, "#BackButton", I18n.translate(locale, "ui.common.back"));
         setText(commands, "#SaveButton", I18n.translate(locale, "ui.editor.save"));
         setText(commands, "#DeleteButton", I18n.translate(locale, "ui.common.delete"));
-        setText(commands, "#ClosePageButton", I18n.translate(locale, "ui.common.close"));
         setText(commands, "#CancelDeleteButton", I18n.translate(locale, "ui.common.cancel"));
         setText(commands, "#ConfirmDeleteButton", I18n.translate(locale, "ui.common.confirm_delete"));
         commands.set("#StatusLabel.TextSpans", Message.raw(status == null ? "" : status));
@@ -141,10 +141,16 @@ public final class RuleEditorPage extends InteractiveCustomUIPage<RuleEditorPage
         commands.set("#DeleteConfirmationLabel.TextSpans", Message.raw(I18n.translate(locale, "ui.editor.delete_confirmation", draft.id)));
 
         commands.set("#RuleIdField.Value", draft.id == null ? "" : draft.id);
+        commands.set("#RuleIdField.PlaceholderText", I18n.translate(locale, "ui.editor.id_placeholder"));
         commands.set("#TargetField.Value", draft.target == null ? "" : draft.target);
+        commands.set("#TargetField.PlaceholderText", I18n.translate(locale, "ui.editor.target_placeholder"));
+        renderTargetIcon(commands);
         commands.set("#GroupField.Value", draft.group == null ? "" : draft.group);
+        commands.set("#GroupField.PlaceholderText", I18n.translate(locale, "ui.editor.group_placeholder"));
         commands.set("#PlayerField.Value", draft.player == null ? "" : draft.player);
+        commands.set("#PlayerField.PlaceholderText", I18n.translate(locale, "ui.editor.player_placeholder"));
         commands.set("#NoteField.Value", draft.note == null ? "" : draft.note);
+        commands.set("#NoteField.PlaceholderText", I18n.translate(locale, "ui.editor.note_placeholder"));
         commands.set("#EnabledCheck.Value", draft.enabled);
         commands.set("#TypeDropdown.Entries", typeEntries());
         commands.set("#ActionDropdown.Entries", actionEntries());
@@ -152,6 +158,37 @@ public final class RuleEditorPage extends InteractiveCustomUIPage<RuleEditorPage
         commands.set("#TypeDropdown.Value", safeName(draft.type, RuleType.CRAFT_ITEM));
         commands.set("#ActionDropdown.Value", safeName(draft.action, RuleAction.DENY));
         commands.set("#ScopeDropdown.Value", safeName(draft.scope, RuleScope.EVERYONE));
+    }
+
+    private void renderTargetIcon(UICommandBuilder commands) {
+        String target = draft.target == null ? "" : draft.target.trim();
+        boolean hasTarget = !target.isBlank();
+        String iconItemId = "";
+
+        if (hasTarget) {
+            try {
+                if (draft.type == RuleType.CRAFT_ITEM) {
+                    String resolvedItemId = plugin.getItemCatalog().resolveItemId(target);
+                    if (resolvedItemId != null) iconItemId = resolvedItemId;
+                } else {
+                    BenchCatalogEntry bench = plugin.getBenchCatalog().describe(target, locale);
+                    if (bench != null && bench.hasIcon()) iconItemId = bench.iconItemId();
+                }
+            } catch (RuntimeException ignored) {
+                iconItemId = "";
+            }
+        }
+
+        boolean hasIcon = !iconItemId.isBlank();
+        commands.set("#TargetIconPanel.Visible", hasTarget);
+        commands.set("#TargetIcon.Visible", hasIcon);
+        commands.set("#TargetKindIcon.Visible", hasTarget && !hasIcon);
+        if (hasIcon) commands.set("#TargetIcon.ItemId", iconItemId);
+
+        String kindKey = draft.type == RuleType.CRAFT_ITEM
+                ? "ui.target_picker.kind_item"
+                : "ui.target_picker.kind_bench";
+        commands.set("#TargetKindIcon.TextSpans", Message.raw(I18n.translate(locale, kindKey)));
     }
 
     private void applyData(EditorEventData data) {
